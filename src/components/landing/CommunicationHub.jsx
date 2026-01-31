@@ -1,4 +1,4 @@
-export default function AiAssistant() {
+export default function CommunicationHub() {
   return (
     <section className="py-24 bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -46,7 +46,12 @@ export default function AiAssistant() {
                 </div>
                 <span className="material-icons-round text-white ml-auto">more_horiz</span>
               </div>
-              <div className="p-6 bg-gray-50 h-80 overflow-y-auto space-y-4">
+              <div className="p-6 bg-gray-50 h-80 overflow-y-auto space-y-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                <style>{`
+                  .overflow-y-auto::-webkit-scrollbar {
+                    display: none;
+                  }
+                `}</style>
                 <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                     <p className="text-xs text-gray-500 mb-1">From: Estate Manager</p>
                     <p className="text-sm font-semibold text-gray-900">Monthly Water Maintenance</p>
