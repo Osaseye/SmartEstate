@@ -1,6 +1,12 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
-import Landing from './pages/Landing'; // Existing file
+import Landing from './pages/Landing';
+import RoleSelection from './pages/RoleSelection';
+import Login from './pages/auth/Login';
+import RegisterManager from './pages/auth/RegisterManager';
+import RegisterTenant from './pages/auth/RegisterTenant';
+import ManagerOnboarding from './pages/manager/Onboarding';
+import TenantOnboarding from './pages/tenant/Onboarding';
 
 // ----------------------------------------------------------------------
 // Protected Route Wrappers (Structural Placeholders)
@@ -30,15 +36,19 @@ function App() {
     <Routes>
       {/* Public Routes */}
       <Route path="/" element={<Landing />} />
-      <Route path="/login" element={<div>Login Page (Coming Soon)</div>} />
-      <Route path="/register" element={<div>Register Page (Coming Soon)</div>} />
+      <Route path="/login" element={<Login />} />
+      
+      {/* Registration Flow */}
+      <Route path="/register" element={<RoleSelection />} />
+      <Route path="/register/manager" element={<RegisterManager />} />
+      <Route path="/register/tenant" element={<RegisterTenant />} />
 
       {/* Manager Routes */}
       <Route path="/manager/*" element={
         <ProtectedRoute allowedRole="manager">
            <Routes>
               <Route path="/" element={<Navigate to="dashboard" />} />
-              <Route path="onboarding" element={<div>Manager Onboarding (Estate Setup)</div>} />
+              <Route path="onboarding" element={<ManagerOnboarding />} />
               <Route path="dashboard" element={<div>Manager Dashboard</div>} />
               {/* Add more manager sub-routes here: /tenants, /payments */}
            </Routes>
@@ -50,9 +60,9 @@ function App() {
         <ProtectedRoute allowedRole="tenant">
            <Routes>
               <Route path="/" element={<Navigate to="dashboard" />} />
-              <Route path="onboarding" element={<div>Tenant Onboarding (Find Estate)</div>} />
-              <Route path="dashboard" element={<div>Tenant Dashboard (My House)</div>} />
-              {/* Add more tenant sub-routes here: /payments, /maintenance */}
+              <Route path="onboarding" element={<TenantOnboarding />} />
+              <Route path="dashboard" element={<div>Tenant Dashboard (Pending or Active)</div>} />
+              {/* Add more tenant sub-routes here */}
            </Routes>
         </ProtectedRoute>
       } />

@@ -55,10 +55,10 @@ export default function Navbar() {
             <img 
               alt="SmartEstate Logo" 
               className="h-12 w-auto" 
-              src="/logo.png" 
+              src="/icon.png" 
             />
             {/* Fallback text if logo doesn't have text, but design shows text next to logo */}
-            <span className="font-display font-bold text-2xl text-gray-900 hidden sm:block">
+            <span className="font-display font-bold text-2xl text-gray-900 block">
               Smart<span className="text-primary">Estate</span>
             </span>
           </div>
@@ -70,7 +70,10 @@ export default function Navbar() {
           </div>
           <div className="flex items-center gap-4">
             <Link to="/login" className="text-gray-600 hover:text-primary hidden sm:block">Log in</Link>
-            <Link to="/register" className="px-5 py-2.5 rounded-full bg-primary hover:bg-sky-600 text-white font-medium text-sm transition-all shadow-lg shadow-primary/20">Create Account</Link>
+            <Link to="/register" className="px-5 py-2.5 rounded-full bg-primary hover:bg-sky-600 text-white font-medium text-sm transition-all shadow-lg shadow-primary/20">
+              <span className="hidden sm:inline">Create Account</span>
+              <span className="sm:hidden">Join Now</span>
+            </Link>
           </div>
         </div>
       </div>

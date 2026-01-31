@@ -1,4 +1,4 @@
-export const MOCK_DATA_KEY = 'smartestate_db';
+export const MOCK_DATA_KEY = 'smartestate_db_v2'; // Bump version to reset data
 
 const initialData = {
   users: [
@@ -28,7 +28,53 @@ const initialData = {
       verificationStatus: 'pending', // pending, verified, rejected
     }
   ],
-  estates: [],
+  estates: [
+    {
+       id: 'e1',
+       name: 'Lekki Gardens Phase 3',
+       address: 'Lekki-Epe Expressway, Lagos',
+       type: 'gated',
+       code: 'EST-1001',
+       managerId: 'u2',
+       image: '/images/estate(2).jpg'
+    },
+    {
+       id: 'e2',
+       name: 'Banana Island Estate',
+       address: 'Ikoyi, Lagos',
+       type: 'gated',
+       code: 'EST-2020',
+       managerId: 'u4',
+       image: '/images/estate.png'
+    },
+    {
+       id: 'e3',
+       name: 'Victoria Garden City (VGC)',
+       address: 'Lekki, Lagos',
+       type: 'gated',
+       code: 'EST-3005',
+       managerId: 'u5',
+       image: '/images/estate(2).jpg'
+    },
+    {
+       id: 'e4',
+       name: 'Richmond Gate Estate',
+       address: 'Alma Beach Estate, Lekki',
+       type: 'gated',
+       code: 'EST-4100',
+       managerId: 'u6',
+       image: '/images/estate.png'
+    },
+    {
+       id: 'e5',
+       name: '1004 Housing Estate',
+       address: 'Victoria Island, Lagos',
+       type: 'complex',
+       code: 'EST-5000',
+       managerId: 'u7',
+       image: '/images/estate(2).jpg'
+    }
+  ],
   houses: [],
   auth: null, // Current logged in user session
 };
@@ -60,7 +106,20 @@ export const MockService = {
     if (data.users.find(u => u.email === userData.email)) {
       return { success: false, message: 'User already exists' };
     }
-    const newUser = { ...userData, id: Date.now().toString() };
+
+    let extraData = {};
+    // If tenant registers with an existing estate code
+    if (userData.role === 'tenant' && userData.estateCode) {
+      const estate = data.estates.find(e => e.code === userData.estateCode);
+      if (estate) {
+        extraData = {
+          estateId: estate.id,
+          verificationStatus: 'pending'
+        };
+      }
+    }
+
+    const newUser = { ...userData, ...extraData, id: Date.now().toString() };
     data.users.push(newUser);
     // Auto-login
     data.auth = newUser; 
@@ -75,6 +134,11 @@ export const MockService = {
   },
 
   // Estate Management
+  getEstates: () => {
+    const data = MockService.getAll();
+    return data.estates;
+  },
+
   createEstate: (estateData) => {
     const data = MockService.getAll();
     const newEstate = { ...estateData, id: Date.now().toString(), managerId: data.auth.id };

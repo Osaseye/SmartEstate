@@ -1,4 +1,21 @@
+import { motion } from 'framer-motion';
+
 export default function CommunicationHub() {
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 1.5 // Stagger delay between messages
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20, scale: 0.95 },
+    show: { opacity: 1, y: 0, scale: 1, transition: { type: "spring", stiffness: 300, damping: 24 } }
+  };
+
   return (
     <section className="py-24 bg-white overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -46,33 +63,40 @@ export default function CommunicationHub() {
                 </div>
                 <span className="material-icons-round text-white ml-auto">more_horiz</span>
               </div>
-              <div className="p-6 bg-gray-50 h-80 overflow-y-auto space-y-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              <motion.div 
+                className="p-6 bg-gray-50 h-80 overflow-y-auto space-y-4"
+                variants={containerVariants}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true, margin: "-50px" }}
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
                 <style>{`
                   .overflow-y-auto::-webkit-scrollbar {
                     display: none;
                   }
                 `}</style>
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                <motion.div variants={itemVariants} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                     <p className="text-xs text-gray-500 mb-1">From: Estate Manager</p>
                     <p className="text-sm font-semibold text-gray-900">Monthly Water Maintenance</p>
                     <p className="text-xs text-gray-600 mt-2">Maintenance is scheduled for Tuesday 10 AM. Water supply may be interrupted for 2 hours.</p>
-                </div>
+                </motion.div>
 
-                <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                <motion.div variants={itemVariants} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                     <p className="text-xs text-gray-500 mb-1">System Update</p>
                     <p className="text-sm font-semibold text-green-600">Rent Payment Verified</p>
                     <p className="text-xs text-gray-600 mt-2">Your receipt for January 2026 has been approved. Thank you.</p>
-                </div>
+                </motion.div>
                 
-                 <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                 <motion.div variants={itemVariants} className="bg-blue-50 p-4 rounded-xl border border-blue-100">
                     <p className="text-xs text-blue-500 mb-1">Your Request</p>
                     <p className="text-sm font-semibold text-gray-900">Leaking Kitchen Sink</p>
                     <div className="flex items-center gap-2 mt-2">
                          <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded-full">IN PROGRESS</span>
                          <span className="text-[10px] text-gray-500">Updated 2h ago</span>
                     </div>
-                </div>
-              </div>
+                </motion.div>
+              </motion.div>
             </div>
             <div className="absolute top-1/2 -right-10 w-24 h-24 bg-secondary rounded-full blur-2xl opacity-20 animate-pulse"></div>
             <div className="absolute bottom-0 -left-10 w-32 h-32 bg-primary rounded-full blur-3xl opacity-20"></div>
