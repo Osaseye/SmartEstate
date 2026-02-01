@@ -6,8 +6,12 @@ import Login from './pages/auth/Login';
 import RegisterManager from './pages/auth/RegisterManager';
 import RegisterTenant from './pages/auth/RegisterTenant';
 import ManagerOnboarding from './pages/manager/Onboarding';
+import AddUnit from './pages/manager/AddUnit';
+import PropertyDetails from './pages/manager/PropertyDetails';
 import TenantOnboarding from './pages/tenant/Onboarding';
 import ManagerDashboard from './pages/manager/Dashboard';
+import ManagerProperties from './pages/manager/Properties';
+import ManagerTenants from './pages/manager/Tenants';
 import TenantDashboard from './pages/tenant/Dashboard';
 import Payments from './pages/tenant/Payments';
 import MakePayment from './pages/tenant/MakePayment';
@@ -68,6 +72,10 @@ function App() {
       }>
         <Route index element={<ManagerDashboard />} />
         <Route path="dashboard" element={<Navigate to="/manager" replace />} />
+        <Route path="properties" element={<ManagerProperties />} />
+        <Route path="properties/new" element={<AddUnit />} />
+        <Route path="properties/:id" element={<PropertyDetails />} />
+        <Route path="tenants" element={<ManagerTenants />} />
         {/* Add more manager sub-routes here: /tenants, /payments */}
       </Route>
 

@@ -26,9 +26,10 @@ const NAV_ITEMS = {
   ],
   manager: [
     { name: "Dashboard", path: "/manager", icon: LayoutDashboard },
-    { name: "Estates", path: "/manager/estates", icon: Building },
+    { name: "Properties", path: "/manager/properties", icon: Building },
     { name: "Tenants", path: "/manager/tenants", icon: Users },
     { name: "Finances", path: "/manager/payments", icon: CreditCard },
+    { name: "Maintenance", path: "/manager/maintenance", icon: Wrench },
     { name: "Settings", path: "/manager/settings", icon: Settings },
   ]
 };
