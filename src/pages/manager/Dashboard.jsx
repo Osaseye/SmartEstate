@@ -10,9 +10,16 @@ import {
   Plus, 
   Search,
   MoreHorizontal,
-  Wallet
+  Wallet,
+  MapPin,
+  Settings,
+  Bell,
+  Wrench,
+  UserPlus,
+  FileText
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+// import { FaMoneyBillWave } from 'react-icons/fa'; // Unused
 
 const StatCard = ({ title, value, subtext, icon: Icon, colorClass, trend }) => (
   <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-all duration-300 group">
@@ -41,6 +48,7 @@ export default function ManagerDashboard() {
   const [stats, setStats] = useState({
     totalTenants: 0,
     pendingRequests: 0,
+    activeMaintenance: 0,
     occupancyRate: '0%',
     revenue: '₦0.00'
   });
@@ -56,11 +64,13 @@ export default function ManagerDashboard() {
           const estateTenants = data.users.filter(u => u.role === 'tenant' && u.estateId === myEstate.id);
           const verifiedTenants = estateTenants.filter(u => u.verificationStatus === 'verified');
           const pendingTenants = estateTenants.filter(u => u.verificationStatus === 'pending');
+          const activeMaintenance = (data.maintenance || []).filter(m => m.status !== 'resolved').length;
           
           setEstate(myEstate);
           setStats({
             totalTenants: verifiedTenants.length,
             pendingRequests: pendingTenants.length,
+            activeMaintenance: activeMaintenance,
             occupancyRate: '78%', 
             revenue: '₦4,250,000'
           });
@@ -85,7 +95,7 @@ export default function ManagerDashboard() {
     );
   }
 
-  // Empty State
+  // Empty State - No Estate Created
   if (!estate) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center p-4">
@@ -112,140 +122,193 @@ export default function ManagerDashboard() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       
-      {/* Header Actions */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 font-display">Dashboard Overview</h1>
-          <p className="text-slate-500">Managing <span className="font-semibold text-slate-700">{estate.name}</span></p>
-        </div>
-        <div className="flex gap-3">
-          <button className="flex items-center justify-center w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors">
-            <Search className="w-5 h-5" />
-          </button>
-          <button className="flex items-center justify-center w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors">
-            <MoreHorizontal className="w-5 h-5" />
-          </button>
-          <Link to="/manager/tenants" className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white font-semibold rounded-xl hover:bg-slate-800 transition-colors">
-            <Plus className="w-4 h-4" />
-            Add Tenant
-          </Link>
-        </div>
+      {/* 1. Hero Banner (Estate Profile) */}
+      <div className="relative rounded-3xl overflow-hidden bg-slate-900 text-white min-h-[280px] shadow-sm flex flex-col justify-end p-8 group">
+         
+         {/* Background Image & Overlay */}
+         <div className="absolute inset-0 z-0">
+             {estate.image ? (
+                 <img src={estate.image} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" alt="Estate" />
+             ) : (
+                 <div className="w-full h-full bg-slate-800" />
+             )}
+             <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-slate-900/20" />
+         </div>
+
+         {/* Banner Content */}
+         <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="space-y-2">
+                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full border border-white/10 text-xs font-bold uppercase tracking-wider text-emerald-300 mb-2">
+                     <Building2 className="w-3 h-3" /> Managed Estate
+                 </div>
+                 <h1 className="text-4xl md:text-5xl font-bold font-display">{estate.name}</h1>
+                 <p className="text-slate-300 text-lg font-light flex items-center gap-2">
+                    <MapPin className="w-5 h-5 text-emerald-400" /> {estate.address}
+                 </p>
+            </div>
+
+            {/* Banner Quick Stats */}
+            <div className="flex items-center gap-8 bg-black/20 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/5">
+                 <div className="text-right">
+                    <div className="text-3xl font-bold text-white">{stats.totalTenants}</div>
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Active Tenants</div>
+                 </div>
+                 <div className="w-px h-10 bg-white/10" />
+                 <div className="text-right">
+                    <div className="text-3xl font-bold text-white">{stats.occupancyRate}</div>
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Occupancy</div>
+                 </div>
+            </div>
+         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* 2. Key Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard 
-          title="Total Revenue" 
-          value={stats.revenue} 
-          icon={Wallet} 
-          colorClass="bg-green-100 text-green-600"
-          trend="+12.5%"
+          title="Total Units" 
+          value="24" 
+          icon={Building2} 
+          colorClass="bg-emerald-100 text-emerald-600"
+          subtext="Managed Properties"
         />
         <StatCard 
-          title="Active Tenants" 
-          value={stats.totalTenants} 
-          icon={Users} 
-          colorClass="bg-blue-100 text-blue-600"
-          subtext={`${stats.totalTenants} units occupied`}
-        />
-        <StatCard 
-          title="Pending Requests" 
-          value={stats.pendingRequests} 
-          icon={Users} 
+          title="Maintenance Pending" 
+          value={stats.activeMaintenance} 
+          icon={Wrench} 
           colorClass="bg-orange-100 text-orange-600"
-          subtext="Requires attention"
+          subtext="3 High Priority"
         />
         <StatCard 
-          title="Occupancy Rate" 
-          value={stats.occupancyRate} 
+          title="Verification Requests" 
+          value={stats.pendingRequests} 
+          icon={UserPlus} 
+          colorClass="bg-blue-100 text-blue-600"
+          subtext="New signups awaiting approval"
+        />
+        <StatCard 
+          title="Occupied Units" 
+          value={stats.totalTenants} 
           icon={Building2} 
           colorClass="bg-purple-100 text-purple-600"
-          trend="+2.4%"
+          subtext="Out of 24 Total Units"
         />
       </div>
 
-      {/* Main Content Split */}
+      {/* 3. Main Dashboard Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* Recent Activity / Tenants List */}
+        {/* Left Column (Primary Info) */}
         <div className="lg:col-span-2 space-y-8">
-          <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-lg text-slate-900 font-display">Recent Payments</h3>
-              <Link to="/manager/payments" className="text-sm font-bold text-primary hover:text-sky-700">View All</Link>
-            </div>
-            
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    <th className="pb-3 pl-2">Tenant</th>
-                    <th className="pb-3">Unit</th>
-                    <th className="pb-3">Amount</th>
-                    <th className="pb-3">Status</th>
-                    <th className="pb-3 pr-2 text-right">Date</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                   {[1, 2, 3].map((_, i) => (
-                     <tr key={i} className="group hover:bg-slate-50/50 transition-colors">
-                       <td className="py-4 pl-2">
-                         <div className="flex items-center gap-3">
-                           <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-500 text-xs">JD</div>
-                           <span className="font-semibold text-slate-900 text-sm">John Doe</span>
-                         </div>
-                       </td>
-                       <td className="py-4 text-sm text-slate-500">Unit 4B</td>
-                       <td className="py-4 font-mono font-medium text-slate-700">₦250,000</td>
-                       <td className="py-4">
-                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700">
-                           Paid
-                         </span>
-                       </td>
-                       <td className="py-4 pr-2 text-right text-sm text-slate-400">2 mins ago</td>
-                     </tr>
-                   ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+           
+           {/* Recent Payments Table */}
+           <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+             <div className="flex items-center justify-between mb-6">
+               <h3 className="font-bold text-lg text-slate-900 font-display">Recent Payments</h3>
+               <Link to="/manager/payments" className="text-sm font-bold text-primary hover:text-sky-700 hover:underline">View All Records</Link>
+             </div>
+             
+             <div className="overflow-x-auto">
+               <table className="w-full text-left border-collapse">
+                 <thead>
+                   <tr className="border-b border-slate-100 text-xs font-bold text-slate-400 uppercase tracking-wider">
+                     <th className="pb-3 pl-2">Tenant</th>
+                     <th className="pb-3">Unit</th>
+                     <th className="pb-3">Payment</th>
+                     <th className="pb-3">Status</th>
+                     <th className="pb-3 pr-2 text-right">Date</th>
+                   </tr>
+                 </thead>
+                 <tbody className="divide-y divide-slate-50">
+                    {[1, 2, 3].map((_, i) => (
+                      <tr key={i} className="group hover:bg-slate-50/50 transition-colors">
+                        <td className="py-4 pl-2">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-500 text-xs shadow-inner">JD</div>
+                            <span className="font-semibold text-slate-900 text-sm">John Doe</span>
+                          </div>
+                        </td>
+                        <td className="py-4 text-sm text-slate-500">Unit 4B</td>
+                        <td className="py-4">
+                           <div className="font-mono font-medium text-slate-700">₦250,000</div>
+                           <div className="text-xs text-slate-400">Rent Payment</div>
+                        </td>
+                        <td className="py-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100 text-green-700">
+                            Verified
+                          </span>
+                        </td>
+                        <td className="py-4 pr-2 text-right text-sm text-slate-400">2h ago</td>
+                      </tr>
+                    ))}
+                 </tbody>
+               </table>
+             </div>
+           </div>
+
         </div>
 
-        {/* Side Widgets */}
+        {/* Right Column (Actions & Widgets) */}
         <div className="lg:col-span-1 space-y-6">
-          
-          {/* Estate Profile Widget */}
-          <div className="bg-slate-900 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
-             <div className="absolute top-0 right-0 w-32 h-32 bg-primary/20 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-             
-             <div className="relative z-10">
-               <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center mb-4 border border-white/10">
-                 <Building2 className="w-6 h-6 text-white" />
-               </div>
-               <h3 className="text-xl font-bold font-display mb-1">{estate.name}</h3>
-               <p className="text-slate-400 text-sm mb-6">{estate.address}</p>
-               
-               <div className="space-y-3">
-                 <div className="flex justify-between items-center text-sm border-b border-white/10 pb-3">
-                   <span className="text-slate-400">Total Units</span>
-                   <span className="font-bold">24</span>
+           
+           {/* Quick Actions Panel */}
+           <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
+              <h3 className="font-bold text-lg text-slate-900 font-display mb-4">Quick Actions</h3>
+              <div className="grid grid-cols-2 gap-3">
+                 <button className="flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-white hover:border-slate-200 hover:shadow-md transition-all group">
+                    <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                       <UserPlus className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-700">Add Tenant</span>
+                 </button>
+                 <button className="flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-white hover:border-slate-200 hover:shadow-md transition-all group">
+                    <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                       <FileText className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-700">Invoices</span>
+                 </button>
+                 <button className="flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-white hover:border-slate-200 hover:shadow-md transition-all group">
+                    <div className="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                       <Bell className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-700">Notice</span>
+                 </button>
+                 <button className="flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-white hover:border-slate-200 hover:shadow-md transition-all group">
+                    <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                       <Settings className="w-5 h-5" />
+                    </div>
+                    <span className="text-xs font-bold text-slate-700">Settings</span>
+                 </button>
+              </div>
+           </div>
+
+           {/* Pending Tasks Mini-List */}
+           <div className="bg-slate-900 text-white rounded-3xl p-6 shadow-lg">
+              <div className="flex justify-between items-center mb-4">
+                 <h3 className="font-bold text-lg font-display">Attention Needed</h3>
+                 <div className="w-6 h-6 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">3</div>
+              </div>
+              
+              <div className="space-y-3">
+                 <div className="bg-white/10 p-3 rounded-xl flex items-center gap-3 cursor-pointer hover:bg-white/20 transition-colors">
+                    <div className="w-2 h-2 rounded-full bg-red-400" />
+                    <div className="flex-1">
+                       <div className="text-sm font-bold">Verification Request</div>
+                       <div className="text-xs text-slate-400">Sarah Connor • Unit 12B</div>
+                    </div>
+                    <ArrowUpRight className="w-4 h-4 text-slate-400" />
                  </div>
-                 <div className="flex justify-between items-center text-sm border-b border-white/10 pb-3">
-                   <span className="text-slate-400">Occupied</span>
-                   <span className="font-bold">18</span>
+                 <div className="bg-white/10 p-3 rounded-xl flex items-center gap-3 cursor-pointer hover:bg-white/20 transition-colors">
+                    <div className="w-2 h-2 rounded-full bg-orange-400" />
+                    <div className="flex-1">
+                       <div className="text-sm font-bold">Leaking Pipe</div>
+                       <div className="text-xs text-slate-400">Block C • High Priority</div>
+                    </div>
+                    <ArrowUpRight className="w-4 h-4 text-slate-400" />
                  </div>
-                 <div className="flex justify-between items-center text-sm pb-1">
-                   <span className="text-slate-400">Maintenance</span>
-                   <span className="font-bold text-orange-400">3 Pending</span>
-                 </div>
-               </div>
-               
-               <button className="w-full mt-6 py-3 bg-white text-slate-900 rounded-xl font-bold text-sm hover:bg-slate-100 transition-colors">
-                 Manage Estate
-               </button>
-             </div>
-          </div>
-          
+              </div>
+
+           </div>
+
         </div>
 
       </div>

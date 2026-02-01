@@ -83,7 +83,7 @@ const Community = () => {
                        <span>{announcements.find(a => a.type === 'urgent').date}</span>
                        <span>•</span>
                        <span>{announcements.find(a => a.type === 'urgent').author}</span>
-                    </div>
+                    </div>  
                  </div>
               </div>
             )}
