@@ -7,6 +7,17 @@ import RegisterManager from './pages/auth/RegisterManager';
 import RegisterTenant from './pages/auth/RegisterTenant';
 import ManagerOnboarding from './pages/manager/Onboarding';
 import TenantOnboarding from './pages/tenant/Onboarding';
+import ManagerDashboard from './pages/manager/Dashboard';
+import TenantDashboard from './pages/tenant/Dashboard';
+import Payments from './pages/tenant/Payments';
+import MakePayment from './pages/tenant/MakePayment';
+import TransactionDetails from './pages/tenant/TransactionDetails';
+import Maintenance from './pages/tenant/Maintenance';
+import NewMaintenance from './pages/tenant/NewMaintenance';
+import MaintenanceDetails from './pages/tenant/MaintenanceDetails';
+import Settings from './pages/tenant/Settings';
+import Community from './pages/tenant/Community';
+import DashboardLayout from './components/layout/DashboardLayout';
 
 // ----------------------------------------------------------------------
 // Protected Route Wrappers (Structural Placeholders)
@@ -44,28 +55,49 @@ function App() {
       <Route path="/register/tenant" element={<RegisterTenant />} />
 
       {/* Manager Routes */}
-      <Route path="/manager/*" element={
+      <Route path="/manager/onboarding" element={
         <ProtectedRoute allowedRole="manager">
-           <Routes>
-              <Route path="/" element={<Navigate to="dashboard" />} />
-              <Route path="onboarding" element={<ManagerOnboarding />} />
-              <Route path="dashboard" element={<div>Manager Dashboard</div>} />
-              {/* Add more manager sub-routes here: /tenants, /payments */}
-           </Routes>
+           <ManagerOnboarding />
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/manager" element={
+        <ProtectedRoute allowedRole="manager">
+          <DashboardLayout />
+        </ProtectedRoute>
+      }>
+        <Route index element={<ManagerDashboard />} />
+        <Route path="dashboard" element={<Navigate to="/manager" replace />} />
+        {/* Add more manager sub-routes here: /tenants, /payments */}
+      </Route>
+
+      {/* Tenant Routes */}
+      <Route path="/tenant/onboarding" element={
+        <ProtectedRoute allowedRole="tenant">
+           <TenantOnboarding />
         </ProtectedRoute>
       } />
 
-      {/* Tenant Routes */}
-      <Route path="/tenant/*" element={
+      <Route path="/tenant" element={
         <ProtectedRoute allowedRole="tenant">
-           <Routes>
-              <Route path="/" element={<Navigate to="dashboard" />} />
-              <Route path="onboarding" element={<TenantOnboarding />} />
-              <Route path="dashboard" element={<div>Tenant Dashboard (Pending or Active)</div>} />
-              {/* Add more tenant sub-routes here */}
-           </Routes>
+          <DashboardLayout />
         </ProtectedRoute>
-      } />
+      }>
+         <Route index element={<TenantDashboard />} />
+         <Route path="payments" element={<Payments />} />
+         <Route path="payments/new" element={<MakePayment />} />
+         <Route path="payments/:id" element={<TransactionDetails />} />
+         
+         {/* Maintenance Routes */}
+         <Route path="maintenance" element={<Maintenance />} />
+         <Route path="maintenance/new" element={<NewMaintenance />} />
+         <Route path="maintenance/:id" element={<MaintenanceDetails />} />
+
+         <Route path="announcements" element={<Community />} />
+         <Route path="settings" element={<Settings />} />
+
+         <Route path="dashboard" element={<Navigate to="/tenant" replace />} />
+      </Route>
     </Routes>
   );
 }

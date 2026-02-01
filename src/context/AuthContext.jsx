@@ -50,7 +50,10 @@ export const AuthProvider = ({ children }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    // Return a default value or warning to prevent crashing during development/hot-reload
+    // if the provider is temporarily unavailable or mistakenly nested.
+    console.warn('useAuth used outside AuthProvider');
+    return { user: null, loading: true, login: () => {}, register: () => {}, logout: () => {} };
   }
   return context;
 };

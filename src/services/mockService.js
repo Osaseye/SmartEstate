@@ -1,4 +1,4 @@
-export const MOCK_DATA_KEY = 'smartestate_db_v2'; // Bump version to reset data
+export const MOCK_DATA_KEY = 'smartestate_db_v3'; // Bump version to reset data
 
 const initialData = {
   users: [
@@ -23,9 +23,9 @@ const initialData = {
       email: 'tenant@test.com',
       password: 'password',
       role: 'tenant',
-      estateId: null,
-      houseId: null,
-      verificationStatus: 'pending', // pending, verified, rejected
+      estateId: 'e2', // Linked to Banana Island
+      houseId: 'h1',
+      verificationStatus: 'verified', // Set to verified
     }
   ],
   estates: [
@@ -76,6 +76,114 @@ const initialData = {
     }
   ],
   houses: [],
+  payments: [
+    {
+      id: 'p1',
+      date: '2023-12-01',
+      description: 'Rent Payment - Dec 2023',
+      amount: 450000,
+      status: 'approved',
+      tenantId: 'u3'
+    },
+    {
+      id: 'p2',
+      date: '2024-01-01',
+      description: 'Service Charge - Jan 2024',
+      amount: 45000,
+      status: 'approved',
+      tenantId: 'u3'
+    }
+  ],
+  invoices: [
+    {
+       id: 'inv1',
+       title: 'Annual Rent (2025)',
+       amount: 2500000,
+       dueDate: '2025-01-01',
+       status: 'pending',
+       tenantId: 'u3'
+    },
+    {
+        id: 'inv2',
+        title: 'Service Charge (Q1 2025)',
+        amount: 50000,
+        dueDate: '2025-02-15',
+        status: 'pending',
+        tenantId: 'u3'
+    }
+  ],
+  maintenance: [
+    {
+      id: 'm1',
+      title: 'Leaking Kitchen Sink',
+      category: 'Plumbing',
+      description: 'The pipe under the sink is leaking water onto the cabinet floor.',
+      priority: 'high',
+      status: 'pending',
+      date: '2025-01-25',
+      updates: [],
+      tenantId: 'u3'
+    },
+    {
+      id: 'm2',
+      title: 'Broken AC in Master Bedroom',
+      category: 'Electrical',
+      description: 'The AC unit is making a loud noise and not cooling.',
+      priority: 'medium',
+      status: 'in-progress',
+      date: '2025-01-20',
+      updates: [
+        { date: '2025-01-21', message: 'Technician scheduled for inspection.' }
+      ],
+      tenantId: 'u3'
+    },
+    {
+      id: 'm3',
+      title: 'Door Handle Loose',
+      category: 'Carpentry',
+      description: 'Front door handle is wobbly.',
+      priority: 'low',
+      status: 'resolved',
+      date: '2024-12-15',
+      updates: [
+         { date: '2024-12-16', message: 'Fixed by maintenance team.' }
+      ],
+      tenantId: 'u3'
+    }
+  ],
+  announcements: [
+    {
+      id: 'a1',
+      title: 'Elevator Maintenance',
+      type: 'news',
+      content: 'Regular elevator maintenance will be carried out this Saturday from 10 AM to 2 PM.',
+      date: '2025-02-01',
+      priority: 'normal',
+      author: 'Estate Manager'
+    },
+    {
+      id: 'a2',
+      title: 'Emergency: Water Shut Off',
+      type: 'urgent',
+      content: 'Due to a burst pipe in Block B, water will be shut off for 2 hours today.',
+      date: '2025-02-01',
+      priority: 'high',
+      author: 'Facility Team'
+    },
+    {
+      id: 'a3',
+      title: 'Community BBQ',
+      type: 'event',
+      content: 'Join us for the annual community BBQ next Sunday!',
+      date: '2025-02-10',
+      priority: 'normal',
+      author: 'Social Committee'
+    }
+  ],
+  visitors: [
+    { id: 'v1', name: 'John Doe', code: '8291', status: 'active', expires: '2025-02-02 18:00', type: 'Guest' },
+    { id: 'v2', name: 'Delivery Driver', code: '1120', status: 'expired', expires: '2025-01-20 14:00', type: 'Delivery' }
+  ],
   auth: null, // Current logged in user session
 };
 
