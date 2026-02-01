@@ -25,8 +25,23 @@ const initialData = {
       role: 'tenant',
       estateId: 'e2', // Linked to Banana Island
       houseId: 'h1',
-      verificationStatus: 'verified', // Set to verified
-    }
+      verificationStatus: 'verified', 
+      proofOfIdentity: 'https://images.unsplash.com/photo-1633265486064-086b219458ec?q=80&w=200&auto=format&fit=crop', // Mock ID
+      employer: 'Tech Corp',
+      nextOfKin: 'John Tenant (Father)'
+    },
+    {
+      id: 'u4',
+      name: 'Michael Scott',
+      email: 'michael@dunder.com',
+      password: 'password',
+      role: 'tenant',
+      estateId: 'e2', // Pending in Banana Island
+      verificationStatus: 'pending',
+      proofOfIdentity: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=200&auto=format&fit=crop',
+      employer: 'Dunder Mifflin',
+      nextOfKin: 'Dwight Schrute (Colleague)'
+    },
   ],
   estates: [
     {
@@ -83,15 +98,17 @@ const initialData = {
       description: 'Rent Payment - Dec 2023',
       amount: 450000,
       status: 'approved',
-      tenantId: 'u3'
+      tenantId: 'u3',
+      proofUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=300&auto=format&fit=crop'
     },
     {
       id: 'p2',
       date: '2024-01-01',
       description: 'Service Charge - Jan 2024',
       amount: 45000,
-      status: 'approved',
-      tenantId: 'u3'
+      status: 'pending',
+      tenantId: 'u3',
+      proofUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=300&auto=format&fit=crop'
     }
   ],
   invoices: [

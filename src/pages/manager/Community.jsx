@@ -10,14 +10,24 @@ import {
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
+import Loader from '../../components/ui/Loader';
+
 export default function ManagerCommunity() {
   const { user } = useAuth();
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [tenants, setTenants] = useState([]); // For dropdown
   
   // Form State
-  const [newPost, setNewPost] = useState({ title: '', content: '', type: 'news', priority: 'normal' });
+  const [newPost, setNewPost] = useState({ 
+    title: '', 
+    content: '', 
+    type: 'news', 
+    priority: 'normal',
+    target: 'all', // all | specific
+    targetTenantId: '' 
+  });
 
   useEffect(() => {
     fetchData();
@@ -27,13 +37,19 @@ export default function ManagerCommunity() {
     setLoading(true);
     try {
       const data = MockService.getAll();
-      // In a real app, filter for estate-specific announcements.
-      // Mock data might be global, but let's assume all 'announcements' are visible.
+      const myEstate = data.estates.find(e => e.managerId === user.id);
+      
+      // Get tenants for dropdown
+       if (myEstate) {
+        const estateUsers = data.users.filter(u => u.estateId === myEstate.id && u.role === 'tenant' && u.verificationStatus === 'verified');
+        setTenants(estateUsers);
+      }
+
       setAnnouncements(data.announcements || []); 
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 500);
     }
   };
 
@@ -53,8 +69,9 @@ export default function ManagerCommunity() {
     
     setAnnouncements(data.announcements);
     setIsCreating(false);
-    setNewPost({ title: '', content: '', type: 'news', priority: 'normal' });
+    setNewPost({ title: '', content: '', type: 'news', priority: 'normal', target: 'all', targetTenantId: '' });
   };
+
 
   const getTypeColor = (type) => {
      switch(type) {
@@ -63,6 +80,8 @@ export default function ManagerCommunity() {
         default: return 'bg-blue-100 text-blue-600 border-blue-200';
      }
   };
+
+  if (loading) return <Loader />;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -94,6 +113,36 @@ export default function ManagerCommunity() {
                      placeholder="e.g. Elevator Maintenance"
                   />
                </div>
+               <div className="grid grid-cols-2 gap-4">
+                  <div>
+                     <label className="block text-sm font-bold text-slate-700 mb-1">Target Audience</label>
+                     <select 
+                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/20"
+                        value={newPost.target}
+                        onChange={(e) => setNewPost({...newPost, target: e.target.value})}
+                     >
+                        <option value="all">Every Resident</option>
+                        <option value="specific">Specific Tenant</option>
+                     </select>
+                  </div>
+                  {newPost.target === 'specific' && (
+                     <div>
+                         <label className="block text-sm font-bold text-slate-700 mb-1">Select Tenant</label>
+                         <select 
+                            required
+                            className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/20"
+                            value={newPost.targetTenantId}
+                            onChange={(e) => setNewPost({...newPost, targetTenantId: e.target.value})}
+                         >
+                            <option value="">-- Choose Tenant --</option>
+                            {tenants.map(t => (
+                               <option key={t.id} value={t.id}>{t.name}</option>
+                            ))}
+                         </select>
+                     </div>
+                  )}
+               </div>
+               
                <div className="grid grid-cols-2 gap-4">
                   <div>
                      <label className="block text-sm font-bold text-slate-700 mb-1">Type</label>

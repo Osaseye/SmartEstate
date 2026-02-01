@@ -14,10 +14,13 @@ import {
   Phone,
   Shield,
   Clock,
+  Briefcase,
+  UserCheck,
   ChevronRight
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { Link } from 'react-router-dom';
+import Loader from '../../components/ui/Loader';
 
 export default function Tenants() {
   const { user } = useAuth();
@@ -28,7 +31,7 @@ export default function Tenants() {
   const [loading, setLoading] = useState(true);
   
   // Modal State for Approval
-  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [viewingRequest, setViewingRequest] = useState(null); // The detailed view state
   const [assignmentUnit, setAssignmentUnit] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -57,12 +60,12 @@ export default function Tenants() {
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 500);
     }
   };
 
   const handleApprove = async () => {
-    if (!selectedRequest || !assignmentUnit) return;
+    if (!viewingRequest || !assignmentUnit) return;
     setIsProcessing(true);
 
     try {
@@ -72,7 +75,7 @@ export default function Tenants() {
       const data = MockService.getAll();
       
       // 1. Update User Status
-      const userIndex = data.users.findIndex(u => u.id === selectedRequest.id);
+      const userIndex = data.users.findIndex(u => u.id === viewingRequest.id);
       if (userIndex > -1) {
          data.users[userIndex].verificationStatus = 'verified';
          data.users[userIndex].houseId = assignmentUnit;
@@ -82,14 +85,14 @@ export default function Tenants() {
       const unitIndex = data.houses.findIndex(h => h.id === assignmentUnit);
       if (unitIndex > -1) {
          data.houses[unitIndex].status = 'occupied';
-         data.houses[unitIndex].tenantId = selectedRequest.id;
-         data.houses[unitIndex].tenantName = selectedRequest.name;
+         data.houses[unitIndex].tenantId = viewingRequest.id;
+         data.houses[unitIndex].tenantName = viewingRequest.name;
       }
 
       MockService.update(data);
       
       // Reset & Refresh
-      setSelectedRequest(null);
+      setViewingRequest(null);
       setAssignmentUnit('');
       fetchData();
 
@@ -100,7 +103,7 @@ export default function Tenants() {
     }
   };
 
-  if (loading) return <div className="p-8 text-center text-slate-500">Loading tenants...</div>;
+  if (loading) return <Loader />;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -174,10 +177,10 @@ export default function Tenants() {
                               Decline
                            </button>
                            <button 
-                              onClick={() => setSelectedRequest(req)}
+                              onClick={() => setViewingRequest(req)}
                               className="flex-1 py-2.5 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200"
                            >
-                              Approve
+                              Review Application
                            </button>
                         </div>
                      </div>
@@ -273,25 +276,89 @@ export default function Tenants() {
          </div>
       )}
 
-      {/* APPROVAL MODAL */}
-      {selectedRequest && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-white rounded-3xl w-full max-w-lg p-6 shadow-2xl">
-               <div className="mb-6">
-                  <h3 className="text-xl font-bold font-display text-slate-900 mb-1">Approve Tenant</h3>
-                  <p className="text-slate-500">Assign a unit to <span className="font-bold text-slate-900">{selectedRequest.name}</span> to complete verification.</p>
+      {/* REVIEW & APPROVAL MODAL */}
+      {viewingRequest && (
+         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
+            <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden my-8">
+               
+               {/* Modal Header */}
+               <div className="bg-slate-50 p-6 border-b border-slate-100 flex justify-between items-start">
+                  <div>
+                    <h3 className="text-xl font-bold font-display text-slate-900 mb-1">Tenant Verification</h3>
+                    <p className="text-slate-500 text-sm">Review details and assign property.</p>
+                  </div>
+                  <button onClick={() => setViewingRequest(null)} className="p-2 hover:bg-slate-200 rounded-full">
+                     <XCircle className="w-6 h-6 text-slate-400" />
+                  </button>
                </div>
 
-               <div className="space-y-4 mb-8">
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+               <div className="p-6 md:p-8 space-y-8">
+                  
+                  {/* Personal Info Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                     <div className="flex items-start gap-4">
+                        <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center font-bold text-2xl text-slate-400">
+                           {viewingRequest.name.substring(0,2)}
+                        </div>
+                        <div>
+                           <h4 className="font-bold text-lg text-slate-900">{viewingRequest.name}</h4>
+                           <div className="text-sm text-slate-500">{viewingRequest.email}</div>
+                           <div className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded inline-block mt-2">
+                              Applicant
+                           </div>
+                        </div>
+                     </div>
+                     
+                     <div className="space-y-3">
+                        <div className="flex items-center gap-3 text-sm text-slate-600">
+                           <Briefcase className="w-4 h-4 text-slate-400" />
+                           <span className="font-bold">Employer:</span> {viewingRequest.employer || 'Self-Employed'}
+                        </div>
+                        <div className="flex items-center gap-3 text-sm text-slate-600">
+                           <UserCheck className="w-4 h-4 text-slate-400" />
+                           <span className="font-bold">Next of Kin:</span> {viewingRequest.nextOfKin || 'Not specified'}
+                        </div>
+                        <div className="flex items-center gap-3 text-sm text-slate-600">
+                           <Clock className="w-4 h-4 text-slate-400" />
+                           <span className="font-bold">Requested:</span> {new Date().toLocaleDateString()}
+                        </div>
+                     </div>
+                  </div>
+
+                  {/* ID Proof Section */}
+                  <div>
+                     <h5 className="font-bold text-slate-900 mb-3 text-sm uppercase tracking-wide">Identification Document</h5>
+                     <div className="h-48 bg-slate-100 rounded-2xl border border-dashed border-slate-300 flex items-center justify-center relative overflow-hidden group">
+                        {viewingRequest.proofOfIdentity ? (
+                           <>
+                              <img src={viewingRequest.proofOfIdentity} className="h-full object-contain mix-blend-multiply opacity-80" />
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/10 transition-colors">
+                                 <button className="bg-white shadow-lg text-slate-900 px-4 py-2 rounded-xl font-bold text-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                                    View Full Image
+                                 </button>
+                              </div>
+                           </>
+                        ) : (
+                           <div className="text-slate-400 text-sm font-medium">No ID Document Uploaded</div>
+                        )}
+                     </div>
+                  </div>
+
+                  {/* Assignment Section */}
+                  <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                     <h5 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <Building2 className="w-5 h-5 text-slate-400" /> 
+                        Property Assignment
+                     </h5>
+                     
                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Select Vacant Unit</label>
                      {vacantUnits.length > 0 ? (
                         <select 
-                           className="w-full p-3 bg-white border border-slate-200 rounded-xl font-medium outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                           className="w-full p-4 bg-white border border-slate-200 rounded-xl font-medium outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                            value={assignmentUnit}
                            onChange={(e) => setAssignmentUnit(e.target.value)}
                         >
-                           <option value="">-- Choose Unit --</option>
+                           <option value="">-- Choose Unit to Assign --</option>
                            {vacantUnits.map(unit => (
                               <option key={unit.id} value={unit.id}>
                                  {unit.name} ({unit.type})
@@ -299,34 +366,33 @@ export default function Tenants() {
                            ))}
                         </select>
                      ) : (
-                        <div className="text-center py-4">
-                           <p className="text-sm text-red-500 font-bold mb-2">No vacant units available!</p>
-                           <Link to="/manager/properties/new" className="text-xs px-3 py-1 bg-slate-200 rounded-lg hover:bg-slate-300 transition-colors">
-                              + Create New Unit
-                           </Link>
+                        <div className="bg-red-50 text-red-600 p-4 rounded-xl border border-red-100 text-sm flex items-center justify-between">
+                           <span className="font-bold">No vacant units available.</span>
+                           <Link to="/manager/properties/new" className="underline text-xs">Create Unit</Link>
                         </div>
                      )}
+                     <p className="text-xs text-slate-400 mt-3">
+                        * Assigning this unit will automatically mark it as occupied and generate a lease record.
+                     </p>
                   </div>
 
-                  <div className="text-xs text-slate-400 flex gap-2">
-                     <Shield className="w-4 h-4" /> This will grant the user access to the tenant portal for this estate.
+                  {/* Action Buttons */}
+                  <div className="flex gap-4 pt-4 border-t border-slate-50">
+                     <button 
+                        onClick={() => setViewingRequest(null)}
+                        className="flex-1 py-4 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+                     >
+                        Cancel
+                     </button>
+                     <button 
+                        disabled={!assignmentUnit || isProcessing}
+                        onClick={handleApprove}
+                        className="flex-1 py-4 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-slate-200 transition-all active:scale-95"
+                     >
+                        {isProcessing ? 'Processing Assignment...' : 'Approve & Assign Unit'}
+                     </button>
                   </div>
-               </div>
 
-               <div className="flex gap-4">
-                  <button 
-                     onClick={() => setSelectedRequest(null)}
-                     className="flex-1 py-3 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50"
-                  >
-                     Cancel
-                  </button>
-                  <button 
-                     disabled={!assignmentUnit || isProcessing}
-                     onClick={handleApprove}
-                     className="flex-1 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                     {isProcessing ? 'Processing...' : 'Confirm Approval'}
-                  </button>
                </div>
             </div>
          </div>

@@ -30,6 +30,7 @@ const NAV_ITEMS = {
     { name: "Tenants", path: "/manager/tenants", icon: Users },
     { name: "Finances", path: "/manager/payments", icon: CreditCard },
     { name: "Maintenance", path: "/manager/maintenance", icon: Wrench },
+    { name: "Community", path: "/manager/community", icon: Megaphone },
     { name: "Settings", path: "/manager/settings", icon: Settings },
   ]
 };
@@ -147,11 +148,11 @@ export default function DashboardLayout() {
         {/* Navigation Items */}
         <div className="flex-1 overflow-y-auto px-4 py-2 no-scrollbar">
           {items.map((item) => (
-            <SidebarItem 
-              key={item.path} 
-              item={item} 
-              isCollapsed={isCollapsed} 
-              onHover={handleItemHover}
+              <SidebarItem 
+                key={item.path} 
+                item={item} 
+                isCollapsed={isCollapsed} 
+                onHover={handleItemHover}
             />
           ))}
         </div>
