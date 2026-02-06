@@ -219,13 +219,16 @@ export default function DashboardLayout() {
 
       {/* Mobile Bottom Navigation - Floating Pill */}
       <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full px-4 flex justify-center pointer-events-none">
-        <div className="pointer-events-auto bg-white/80 backdrop-blur-md border border-white/40 shadow-2xl shadow-slate-900/20 rounded-2xl px-3 py-2 flex items-center justify-between gap-1 w-auto min-w-[280px] max-w-sm ring-1 ring-white/50">
-          {items.slice(0, 5).map((item) => (
+        <div className="pointer-events-auto bg-white/80 backdrop-blur-md border border-white/40 shadow-2xl shadow-slate-900/20 rounded-2xl px-2 py-2 flex items-center justify-between gap-1 w-auto min-w-[280px] max-w-[95vw] ring-1 ring-white/50 overflow-x-auto no-scrollbar">
+          {items.map((item) => (
             <NavLink    
               key={item.path}
               to={item.path}
               end={item.path.split('/').length === 2}
-              className={({ isActive }) => cn("relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-300 isolate", isActive ? "text-primary shadow-sm" : "text-slate-500 hover:text-slate-700")}
+              className={({ isActive }) => cn(
+                "relative flex items-center justify-center min-w-[40px] w-10 h-10 rounded-xl transition-all duration-300 isolate shrink-0", 
+                isActive ? "text-primary shadow-sm" : "text-slate-500 hover:text-slate-700"
+              )}
             >
               {({ isActive }) => (
                 <>

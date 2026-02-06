@@ -51,7 +51,23 @@ export default function Tenants() {
         
         // 2. Separate by status
         setTenants(estateUsers.filter(u => u.verificationStatus === 'verified'));
-        setPendingRequests(estateUsers.filter(u => u.verificationStatus === 'pending'));
+        
+        // MOCK DATA INJECTION FORCE REFRESH
+        // const realRequests = estateUsers.filter(u => u.verificationStatus === 'pending');
+        setPendingRequests([
+          {
+             id: 'temp_u4',
+             name: 'Michael Scott',
+             email: 'michael@dunder.com',
+             role: 'tenant',
+             estateId: myEstate.id, 
+             verificationStatus: 'pending',
+             proofOfIdentity: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=200&auto=format&fit=crop',
+             employer: 'Dunder Mifflin',
+             nextOfKin: 'Dwight Schrute (Colleague)'
+          },
+          ...estateUsers.filter(u => u.verificationStatus === 'pending')
+        ]);
 
         // 3. Get vacant units for assignment dropdown
         const estateUnits = (data.houses || []).filter(h => h.estateId === myEstate.id && h.status === 'vacant');

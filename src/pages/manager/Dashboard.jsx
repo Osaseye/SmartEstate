@@ -22,22 +22,22 @@ import { cn } from '../../lib/utils';
 // import { FaMoneyBillWave } from 'react-icons/fa'; // Unused
 
 const StatCard = ({ title, value, subtext, icon: Icon, colorClass, trend }) => (
-  <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-all duration-300 group">
+  <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-all duration-300 group">
     <div className="flex justify-between items-start mb-4">
-      <div className={cn("p-3 rounded-xl transition-colors", colorClass)}>
-        <Icon className="w-6 h-6" />
+      <div className={cn("p-2 md:p-3 rounded-xl transition-colors", colorClass)}>
+        <Icon className="w-5 h-5 md:w-6 md:h-6" />
       </div>
       {trend && (
-        <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full flex items-center gap-1">
+        <span className="text-[10px] md:text-xs font-bold text-green-600 bg-green-50 px-2 py-1 rounded-full flex items-center gap-1">
           <ArrowUpRight className="w-3 h-3" /> {trend}
         </span>
       )}
     </div>
     
     <div>
-      <h3 className="text-3xl font-bold text-slate-900 font-display mb-1">{value}</h3>
-      <p className="text-sm font-medium text-slate-500">{title}</p>
-      {subtext && <p className="text-xs text-slate-400 mt-2">{subtext}</p>}
+      <h3 className="text-2xl md:text-3xl font-bold text-slate-900 font-display mb-1">{value}</h3>
+      <p className="text-xs md:text-sm font-medium text-slate-500">{title}</p>
+      {subtext && <p className="text-[10px] md:text-xs text-slate-400 mt-2">{subtext}</p>}
     </div>
   </div>
 );
