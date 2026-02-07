@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Sparkles, MessageSquare } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
+import { generateAIResponse } from '../../lib/ai';
 
 export default function AIChatbot() {
   const { user } = useAuth();
@@ -37,26 +38,25 @@ export default function AIChatbot() {
     setInput('');
     setIsTyping(true);
 
-    // Mock AI Logic
-    setTimeout(() => {
-        let responseText = "I can help with that. Please verify the details in your dashboard.";
-        const lowerInput = userMsg.text.toLowerCase();
-
-        if (lowerInput.includes('pay') || lowerInput.includes('rent')) {
-            responseText = "You can manage payments in the 'Finances' tab. We support bank transfer and card payments.";
-        } else if (lowerInput.includes('maintenance') || lowerInput.includes('fix') || lowerInput.includes('broken')) {
-            responseText = "For repairs, submit a ticket in the 'Maintenance' section. Our team typically responds within 24 hours.";
-        } else if (lowerInput.includes('verify') || lowerInput.includes('tenant')) {
-            responseText = "Tenant verification helps secure your estate. Go to 'Tenants' > 'Requests' to approve new applicants.";
-        }
-
+    // AI Logic
+    try {
+        const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+        const responseText = await generateAIResponse(userMsg.text, apiKey);
+        
         setMessages(prev => [...prev, { 
             id: Date.now() + 1, 
             role: 'assistant', 
             text: responseText 
         }]);
+    } catch (error) {
+        setMessages(prev => [...prev, { 
+            id: Date.now() + 1, 
+            role: 'assistant', 
+            text: "I'm having a bit of trouble connecting right now. Please try again." 
+        }]);
+    } finally {
         setIsTyping(false);
-    }, 1200);
+    }
   };
 
   return (
