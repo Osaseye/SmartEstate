@@ -92,11 +92,15 @@ export default function ManagerDashboard() {
            // 2. Fetch Estate Users (Tenants)
            const qUsers = query(collection(db, "users"), where("estateId", "==", myEstate.id));
            const usersSnapshot = await getDocs(qUsers);
-           const estateUsers = usersSnapshot.docs.map(d => d.data());
+           const estateUsers = usersSnapshot.docs.map(d => ({id: d.id, ...d.data()}));
+           
+           // Create User Map for Lookups
+           const userMap = {};
+           estateUsers.forEach(u => { userMap[u.id] = u; });
 
            // Normalize role check and ensure role default
-           const verifiedTenants = estateUsers.filter(u => (u.role === 'tenant' || u.role === 'Tenant') && u.verificationStatus === 'verified');
-           const pendingTenants = estateUsers.filter(u => (u.role === 'tenant' || u.role === 'Tenant') && u.verificationStatus === 'pending');
+           const verifiedTenants = estateUsers.filter(u => (u.role === 'verified' || (u.role === 'resident' && u.verificationStatus === 'verified') || (u.role === 'tenant' && u.verificationStatus === 'verified')));
+           const pendingTenants = estateUsers.filter(u => u.verificationStatus === 'pending');
 
            // 3. Fetch Maintenance Counts
            const qMaint = query(collection(db, "maintenance"), where("estateId", "==", myEstate.id), where("status", "==", "pending"));
@@ -115,7 +119,15 @@ export default function ManagerDashboard() {
               limit(5)
            );
            const recentPaysSnap = await getDocs(qRecentPays);
-           const recentPays = recentPaysSnap.docs.map(d => ({id: d.id, ...d.data()}));
+           const recentPays = recentPaysSnap.docs.map(d => {
+               const data = d.data();
+               const tenant = userMap[data.tenantId || data.userId];
+               return {
+                   id: d.id, 
+                   ...data, 
+                   tenantName: tenant ? tenant.name : (data.tenantName || 'Unknown Tenant')
+               };
+           });
            setRecentPayments(recentPays);
 
            // 6. Fetch Total Properties (REAL COUNT)

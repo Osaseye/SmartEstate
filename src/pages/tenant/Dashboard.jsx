@@ -93,11 +93,13 @@ const TenantDashboard = () => {
   const { user } = useAuth();
   const [estate, setEstate] = useState(null);
   const [visitors, setVisitors] = useState([]);
+  const [property, setProperty] = useState(null);
   
-  // Mock stats for dashboard display
+  // Real stats for dashboard display
   const [stats, setStats] = useState({
     outstandingRent: '₦0.00',
-    activeMaintenance: 0
+    activeMaintenance: 0,
+    rentDueDate: null
   });
 
   // Mock activity feed
@@ -113,7 +115,39 @@ const TenantDashboard = () => {
               setEstate({id: estateDoc.id, ...estateDoc.data()});
            }
 
-           // 2. Fetch Visitors
+           // 2. Fetch Assigned Property
+           if (user.houseId) {
+             const propDoc = await getDoc(doc(db, "properties", user.houseId));
+             if (propDoc.exists()) {
+               const propData = propDoc.data();
+               setProperty({id: propDoc.id, ...propData});
+               
+               // Calculate Next Rent Date
+               if (propData.rentDueDate) {
+                  const today = new Date();
+                  const currentMonth = today.getMonth();
+                  const currentYear = today.getFullYear();
+                  const dueDay = parseInt(propData.rentDueDate);
+                  
+                  let nextDate = new Date(currentYear, currentMonth, dueDay);
+                  if (nextDate < today) {
+                    nextDate = new Date(currentYear, currentMonth + 1, dueDay);
+                  }
+                  
+                  setStats(prev => ({
+                    ...prev,
+                    rentDueDate: nextDate
+                  }));
+               }
+             }
+           }
+
+           // 3. Fetch Maintenance Stats
+            const maintQ = query(collection(db, "maintenance"), where("tenantId", "==", user.uid), where("status", "in", ["pending", "in-progress"]));
+            const maintSnap = await getDocs(maintQ);
+            setStats(prev => ({ ...prev, activeMaintenance: maintSnap.size }));
+
+           // 4. Fetch Visitors
            const q = query(collection(db, "visitors"), where("tenantId", "==", user.uid || user.id));
            const snapshot = await getDocs(q);
            const myVisitors = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
@@ -211,7 +245,10 @@ const TenantDashboard = () => {
           </div>
           <div>
             <h3 className="text-lg font-bold text-slate-900 font-display">My Residence</h3>
-            <p className="text-slate-500 text-sm">Unit 402, Block C • 3 Bedroom Apartment</p>
+            <p className="text-slate-500 text-sm">
+                {property ? property.name : "Unit Not Assigned"} 
+                {property && property.type && ` • ${property.type}`}
+            </p>
           </div>
         </div>
         
@@ -263,11 +300,11 @@ const TenantDashboard = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
              <StatCard 
                title="Next Rent Due" 
-               value="Mar 01, 2026" 
+               value={stats.rentDueDate ? stats.rentDueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "Not Set"} 
                icon={Clock} 
                iconBg="bg-emerald-50"
                iconColor="text-emerald-600"
-               trend="28 days left"
+               trend={stats.rentDueDate ? `${Math.ceil((stats.rentDueDate - new Date()) / (1000 * 60 * 60 * 24))} days left` : null}
              />
              <StatCard 
                title="Active Requests" 

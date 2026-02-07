@@ -30,7 +30,7 @@
         match /properties/{propertyId} {
         allow read: if isAuthenticated();
         // Allow managers to update property status and link tenants
-        allow create, update: if isAuthenticated(); 
+        allow create, update, delete: if isAuthenticated(); 
         }
 
         // Visitors: Tenant read/write own

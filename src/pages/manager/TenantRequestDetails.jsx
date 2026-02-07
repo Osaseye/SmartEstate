@@ -27,7 +27,7 @@ export default function TenantRequestDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { addToast } = useToast();
+  const { addToast, toasts, removeToast } = useToast();
   
   const [request, setRequest] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -87,7 +87,7 @@ export default function TenantRequestDetails() {
           tenantId: request.id,
           tenantName: request.name
       });
-ddToast({
+      addToast({
         type: 'success',
         title: 'Tenant Approved',
         message: `${request.name} has been assigned to unit successfully.`

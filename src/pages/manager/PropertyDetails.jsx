@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useToast } from '../../components/ui/Toast';
+import { useToast, ToastContainer } from '../../components/ui/Toast';
 import { db } from '../../lib/firebase'; // Removed MockService
 import { doc, getDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { 
@@ -20,25 +20,33 @@ export default function PropertyDetails() {
   const { id } = useParams();
   const { user } = useAuth(); // estate manager
   const navigate = useNavigate();
-  const { addToast } = useToast();
+  const { addToast, toasts, removeToast } = useToast();
   
   const [unit, setUnit] = useState(null);
   const [tenant, setTenant] = useState(null);
   const [maintenance, setMaintenance] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
-    if (!window.confirm("Are you sure you want to delete this unit? This cannot be undone.")) return;
+    if (!isDeleting) {
+       setIsDeleting(true);
+       // Auto reset after 3 seconds if not confirmed
+       setTimeout(() => setIsDeleting(false), 3000);
+       return;
+    }
     
     // We don't set global loading=true here because it removes the UI content. 
     // We could add a deleting state, but for now blocking interaction is enough or assuming quick delete.
     try {
         await deleteDoc(doc(db, "properties", id));
         addToast({ type: 'success', title: 'Unit Deleted', message: 'Property has been removed successfully.' });
-        navigate('/manager/properties');
+        // Slight delay
+        setTimeout(() => navigate('/manager/properties'), 1000);
     } catch (error) {
         console.error("Error deleting unit:", error);
         addToast({ type: 'error', title: 'Delete Failed', message: error.message });
+        setIsDeleting(false);
     }
   };
 
@@ -136,9 +144,13 @@ export default function PropertyDetails() {
              </button>
              <button 
                 onClick={handleDelete}
-                className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-100 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-colors"
+                className={`flex items-center gap-2 px-4 py-2 font-bold rounded-xl transition-all duration-200 ${
+                    isDeleting 
+                    ? 'bg-red-600 text-white border border-red-600' 
+                    : 'bg-red-50 border border-red-100 text-red-600 hover:bg-red-100'
+                }`}
              >
-                <Trash2 className="w-4 h-4" /> Delete
+                <Trash2 className="w-4 h-4" /> {isDeleting ? 'Confirm?' : 'Delete'}
              </button>
           </div>
        </div>
@@ -263,6 +275,7 @@ export default function PropertyDetails() {
           </div>
 
        </div>
+       <ToastContainer toasts={toasts} remove={removeToast} />
     </div>
   );
 }

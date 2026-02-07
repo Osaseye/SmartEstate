@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { MockService } from '../../services/mockService';
+import { doc, updateDoc } from 'firebase/firestore'; 
+import { db } from '../../lib/firebase';
 import { 
   LucideUser, 
   LucideLock, 
@@ -40,35 +41,33 @@ const Settings = () => {
   });
 
   useEffect(() => {
-    // Load fresh user data
-    const data = MockService.getAll();
-    const currentUser = data.users.find(u => u.id === user.id);
-    if (currentUser) {
+    if (user) {
       setProfileData({
-        name: currentUser.name || '',
-        email: currentUser.email || '',
-        phone: currentUser.phone || '',
+        name: user.name || '',
+        email: user.email || '',
+        phone: user.phone || '',
       });
-      // Mock loading notifications settings if they existed
     }
-  }, [user.id]);
+  }, [user]);
 
-  const handleProfileUpdate = (e) => {
+  const handleProfileUpdate = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
-    setTimeout(() => {
-      const data = MockService.getAll();
-      const userIndex = data.users.findIndex(u => u.id === user.id);
-      
-      if (userIndex !== -1) {
-        data.users[userIndex] = { ...data.users[userIndex], ...profileData };
-        MockService.update(data);
-        setSuccessMsg('Profile updated successfully');
-        setTimeout(() => setSuccessMsg(''), 3000);
-      }
+    setSuccessMsg('');
+    try {
+      const userRef = doc(db, "users", user.id || user.uid);
+      await updateDoc(userRef, {
+        name: profileData.name,
+        phone: profileData.phone
+      });
+      setSuccessMsg('Profile updated successfully');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch(err) {
+      console.error(err);
+      alert('Failed to update profile');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const handlePasswordUpdate = (e) => {
@@ -79,18 +78,11 @@ const Settings = () => {
     }
     
     setLoading(true);
+    // Real password update requires re-authentication with current password
     setTimeout(() => {
-        // In a real app we would check current password hash
-        const data = MockService.getAll();
-        const userIndex = data.users.findIndex(u => u.id === user.id);
-        
-        if (userIndex !== -1) {
-             data.users[userIndex].password = passwordData.new;
-             MockService.update(data);
-             setSuccessMsg('Password changed successfully');
-             setPasswordData({ current: '', new: '', confirm: '' });
-             setTimeout(() => setSuccessMsg(''), 3000);
-        }
+        setSuccessMsg('Password changed successfully (Simulation)');
+        setPasswordData({ current: '', new: '', confirm: '' });
+        setTimeout(() => setSuccessMsg(''), 3000);
         setLoading(false);
     }, 1000);
   };

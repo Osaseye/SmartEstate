@@ -22,6 +22,7 @@ export default function Tenants() {
   const [activeTab, setActiveTab] = useState('directory'); // directory | requests
   const [tenants, setTenants] = useState([]);
   const [pendingRequests, setPendingRequests] = useState([]);
+  const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
@@ -46,6 +47,11 @@ export default function Tenants() {
         
       // 3. Get Pending Requests
       setPendingRequests(estateUsers.filter(u => u.verificationStatus === 'pending'));
+
+      // 4. Get Properties for lookup
+      const propsQ = query(collection(db, "properties"), where("estateId", "==", user.estateId));
+      const propsSnap = await getDocs(propsQ);
+      setProperties(propsSnap.docs.map(d => ({id: d.id, ...d.data()})));
 
     } catch (err) {
       console.error(err);
@@ -174,7 +180,8 @@ export default function Tenants() {
                      </thead>
                      <tbody className="divide-y divide-slate-50">
                         {tenants.map(tenant => {
-                           const assignedUnit = MockService.getAll().houses.find(h => h.id === tenant.houseId);
+                           // Find property in our fetched properties list
+                           const assignedUnit = properties.find(h => h.id === tenant.houseId);
                            
                            return (
                               <tr key={tenant.id} className="group hover:bg-slate-50/50 transition-colors">

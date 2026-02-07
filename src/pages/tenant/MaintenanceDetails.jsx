@@ -112,9 +112,9 @@ const MaintenanceDetails = () => {
             <h3 className="font-bold text-slate-900">Attached Photos</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                {ticket.images.map((img, idx) => (
-                 <div key={idx} className="aspect-square bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-center text-slate-400">
-                    {/* In a real app, this would be an <img src={url} /> */}
-                    <span className="text-xs text-center px-2">{img}</span>
+                 <div key={idx} className="aspect-square bg-slate-100 rounded-xl border border-slate-200 overflow-hidden relative group cursor-pointer">
+                    <img src={img} alt={`Attachment ${idx+1}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
                  </div>
                ))}
             </div>

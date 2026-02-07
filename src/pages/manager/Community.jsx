@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { MockService } from '../../services/mockService';
+import { db } from '../../lib/firebase';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, orderBy } from 'firebase/firestore'; 
 import { 
   Megaphone,
   Plus,
@@ -33,43 +34,68 @@ export default function ManagerCommunity() {
     fetchData();
   }, [user]);
 
-  const fetchData = () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const data = MockService.getAll();
-      const myEstate = data.estates.find(e => e.managerId === user.id);
-      
-      // Get tenants for dropdown
-       if (myEstate) {
-        const estateUsers = data.users.filter(u => u.estateId === myEstate.id && u.role === 'tenant' && u.verificationStatus === 'verified');
-        setTenants(estateUsers);
-      }
+      if (!user.estateId) return;
 
-      setAnnouncements(data.announcements || []); 
+      // 1. Fetch Tenants for Dropdown
+      const usersQ = query(collection(db, "users"), where("estateId", "==", user.estateId), where("role", "==", "tenant"), where("verificationStatus", "==", "verified"));
+      const usersSnap = await getDocs(usersQ);
+      setTenants(usersSnap.docs.map(d => ({id: d.id, ...d.data()})));
+
+      // 2. Fetch Announcements
+      const annQ = query(collection(db, "announcements"), where("estateId", "==", user.estateId));
+      // Note: OrderBy requires index, so we sort client side if needed or use simple query
+      const annSnap = await getDocs(annQ);
+      const annList = annSnap.docs.map(d => {
+         const data = d.data();
+         // Handle timestamps
+         const date = data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.date);
+         return { id: d.id, ...data, date: date.toISOString() };
+      });
+      
+      annList.sort((a,b) => new Date(b.date) - new Date(a.date));
+      setAnnouncements(annList); 
     } catch (err) {
       console.error(err);
     } finally {
-      setTimeout(() => setLoading(false), 500);
+      setLoading(false);
     }
   };
 
-  const handlePost = (e) => {
+  const handlePost = async (e) => {
     e.preventDefault();
-    const data = MockService.getAll();
-    const post = {
-       ...newPost,
-       id: Date.now().toString(),
-       date: new Date().toISOString(),
-       author: user.name || 'Manager'
-    };
-    
-    if(!data.announcements) data.announcements = [];
-    data.announcements.unshift(post);
-    MockService.update(data);
-    
-    setAnnouncements(data.announcements);
-    setIsCreating(false);
-    setNewPost({ title: '', content: '', type: 'news', priority: 'normal', target: 'all', targetTenantId: '' });
+    if (!user.estateId) return;
+
+    try {
+        const payload = {
+            ...newPost,
+            estateId: user.estateId,
+            author: user.name || 'Manager',
+            authorId: user.uid || user.id,
+            createdAt: serverTimestamp(),
+            readBy: []
+        };
+        
+        // Add to Firestore
+        const docRef = await addDoc(collection(db, "announcements"), payload);
+        
+        // Add to local state (optimistic)
+        const localPost = {
+            ...payload,
+            id: docRef.id,
+            date: new Date().toISOString()
+        };
+        
+        setAnnouncements(prev => [localPost, ...prev]);
+        setIsCreating(false);
+        setNewPost({ title: '', content: '', type: 'news', priority: 'normal', target: 'all', targetTenantId: '' });
+
+    } catch (err) {
+        console.error("Error creating announcement", err);
+        alert("Failed to post announcement");
+    }
   };
 
 

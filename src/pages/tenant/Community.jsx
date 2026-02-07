@@ -24,11 +24,28 @@ const Community = () => {
     const fetchData = async () => {
         if (user && user.estateId) {
             try {
-                // In future: query(collection(db, "announcements"), where("estateId", "==", user.estateId))
-                // For now, empty or fetch all simple
-                const q = query(collection(db, "announcements"), where("estateId", "==", user.estateId));
+                const q = query(
+                    collection(db, "announcements"), 
+                    where("estateId", "==", user.estateId)
+                );
                 const snapshot = await getDocs(q);
-                setAnnouncements(snapshot.docs.map(d => ({id: d.id, ...d.data()})));
+                let allAnn = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+                
+                // Filter content relevant to me
+                allAnn = allAnn.filter(a => {
+                    if (a.target === 'all') return true;
+                    if (a.target === 'specific' && a.targetTenantId === (user.id || user.uid)) return true;
+                    return false;
+                });
+                
+                // Sort by date descending
+                allAnn.sort((a,b) => {
+                     const dateA = a.createdAt?.seconds || new Date(a.date).getTime();
+                     const dateB = b.createdAt?.seconds || new Date(b.date).getTime();
+                     return dateB - dateA;
+                });
+
+                setAnnouncements(allAnn);
             } catch (err) {
                 console.error("Error fetching announcements:", err);
             } finally {
