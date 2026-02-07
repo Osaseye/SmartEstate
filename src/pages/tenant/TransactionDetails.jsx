@@ -108,11 +108,23 @@ const TransactionDetails = () => {
                 </h3>
                 
                 <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 flex flex-col items-center justify-center text-center h-48 mb-4">
-                     {/* Mock Preview */}
-                     <div className="w-12 h-12 bg-white rounded-lg shadow-sm flex items-center justify-center text-red-500 mb-2">
-                        <FaFileAlt className="text-2xl" />
-                     </div>
-                     <p className="text-slate-700 font-medium text-sm truncate w-full px-4">{transaction.proofFile || "receipt.pdf"}</p>
+                     {/* Image Preview or Icon */}
+                     {transaction.proofFile && /\.(jpg|jpeg|png|gif|webp)$/i.test(transaction.proofFile) || transaction.proofFile?.startsWith('http') ? (
+                       <div className="w-full h-full overflow-hidden rounded-lg">
+                           <img 
+                              src={transaction.proofFile} 
+                              alt="Payment Proof" 
+                              className="w-full h-full object-contain bg-slate-200"
+                           />
+                       </div>
+                     ) : (
+                       <>
+                         <div className="w-12 h-12 bg-white rounded-lg shadow-sm flex items-center justify-center text-red-500 mb-2">
+                            <FaFileAlt className="text-2xl" />
+                         </div>
+                         <p className="text-slate-700 font-medium text-sm truncate w-full px-4">{transaction.proofFile || "receipt.pdf"}</p>
+                       </>
+                     )}
                      <p className="text-slate-400 text-xs mt-1">Uploaded on {transaction.date}</p>
                 </div>
 

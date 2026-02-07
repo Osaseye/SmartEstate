@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { useToast, ToastContainer } from '../../components/ui/Toast';
 import { db } from '../../lib/firebase';
 import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore'; 
 import { 
@@ -17,7 +19,8 @@ import { cn } from '../../lib/utils';
 
 export default function ManagerMaintenance() {
   const { user } = useAuth();
-  const [requests, setRequests] = useState([]);
+  const { addToast, toasts, removeToast } = useToast();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all | pending | in-progress | resolved
 
@@ -93,9 +96,10 @@ export default function ManagerMaintenance() {
           await updateDoc(ticketRef, { status: newStatus });
           // Optimistic local update
           setRequests(prev => prev.map(r => r.id === ticketId ? {...r, status: newStatus} : r));
+          addToast({ type: 'success', title: 'Status Updated', message: `Request marked as ${newStatus}` });
       } catch(err) {
           console.error("Error updating status:", err);
-          alert("Failed to update status");
+          addToast({ type: 'error', title: 'Update Failed', message: 'Failed to update status' });
       }
   };
 
@@ -193,7 +197,13 @@ export default function ManagerMaintenance() {
                </div>
 
                <button 
-                  onClick={() => handleStatusUpdate(req.id, req.status === 'pending' ? 'in-progress' : 'resolved')}
+                  onClick={() => {
+                      if (req.status === 'resolved') {
+                          navigate(`/manager/maintenance/${req.id}`);
+                      } else {
+                          handleStatusUpdate(req.id, req.status === 'pending' ? 'in-progress' : 'resolved');
+                      }
+                  }}
                   className="w-full py-2 bg-slate-50 text-slate-600 font-bold rounded-lg text-sm hover:bg-slate-100 transition-colors"
                >
                   {req.status === 'pending' ? 'Mark In Progress' : req.status === 'in-progress' ? 'Mark Resolved' : 'View Details'}
@@ -211,7 +221,7 @@ export default function ManagerMaintenance() {
            </div>
         )}
       </div>
-
+      <ToastContainer toasts={toasts} remove={removeToast} />
     </div>
   );
 }

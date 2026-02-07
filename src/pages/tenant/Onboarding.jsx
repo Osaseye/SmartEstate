@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../lib/firebase';
 import { uploadFile } from '../../lib/storage';
+import { useToast } from '../../components/ui/Toast';
 import { collection, getDocs, orderBy, query, doc, updateDoc, onSnapshot } from 'firebase/firestore'; 
 
 export default function TenantOnboarding() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { addToast, removeToast, toasts, ToastContainer } = useToast();
   
   const [step, setStep] = useState(1);
   const [estates, setEstates] = useState([]);
@@ -98,7 +100,7 @@ export default function TenantOnboarding() {
 
   const handleJoin = async () => {
     if (!idFile) {
-        alert("Please upload a valid ID to proceed.");
+        addToast("Please upload a valid ID to proceed.", "error");
         return;
     }
 
@@ -131,7 +133,7 @@ export default function TenantOnboarding() {
       
     } catch (error) {
        console.error("Error joining estate:", error);
-       alert("Failed to join estate. Please try again.");
+       addToast("Failed to join estate. Please try again.", "error");
     } finally {
        setLoading(false);
     }
@@ -426,6 +428,7 @@ export default function TenantOnboarding() {
           </div>
         )}
       </div>
+      <ToastContainer toasts={toasts} remove={removeToast} />
     </div>
   );
 }

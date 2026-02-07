@@ -105,6 +105,7 @@ function App() {
         <Route path="tenants" element={<ManagerTenants />} />
         <Route path="tenants/request/:id" element={<TenantRequestDetails />} />
         <Route path="maintenance" element={<ManagerMaintenance />} />
+        <Route path="maintenance/:id" element={<MaintenanceDetails />} />
         <Route path="payments" element={<ManagerFinance />} />
         <Route path="community" element={<ManagerCommunity />} />
         <Route path="settings" element={<ManagerSettings />} />

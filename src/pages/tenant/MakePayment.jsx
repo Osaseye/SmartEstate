@@ -4,11 +4,13 @@ import { db } from '../../lib/firebase';
 import { uploadFile } from '../../lib/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../components/ui/Toast';
 import { FaFileUpload, FaFileAlt, FaChevronRight } from 'react-icons/fa';
 
 const MakePayment = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { addToast, removeToast, toasts, ToastContainer } = useToast();
   
   const [amount, setAmount] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
@@ -51,12 +53,12 @@ const MakePayment = () => {
         await addDoc(collection(db, "payments"), newPayment);
         
         setUploading(false);
-        alert('Payment proof uploaded successfully!');
-        navigate('/tenant/payments');
+        addToast('Payment proof uploaded successfully!', 'success');
+        setTimeout(() => navigate('/tenant/payments'), 2000);
     } catch (err) {
         console.error("Error creating payment:", err);
         setUploading(false);
-        alert('Failed to submit payment.');
+        addToast('Failed to submit payment.', 'error');
     }
   };
 
@@ -169,6 +171,7 @@ const MakePayment = () => {
         </div>
 
       </div>
+      <ToastContainer toasts={toasts} remove={removeToast} />
     </div>
   );
 };

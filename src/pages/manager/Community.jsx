@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../lib/firebase';
-import { collection, query, where, getDocs, addDoc, serverTimestamp, orderBy } from 'firebase/firestore'; 
+import { collection, query, where, getDocs, addDoc, serverTimestamp, orderBy, deleteDoc, doc } from 'firebase/firestore'; 
 import { 
   Megaphone,
   Plus,
@@ -10,14 +10,17 @@ import {
   Trash2
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useToast } from '../../components/ui/Toast';
 
 import Loader from '../../components/ui/Loader';
 
 export default function ManagerCommunity() {
   const { user } = useAuth();
+  const { addToast, removeToast, toasts, ToastContainer } = useToast();
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [isPosting, setIsPosting] = useState(false);
   const [tenants, setTenants] = useState([]); // For dropdown
   
   // Form State
@@ -67,7 +70,9 @@ export default function ManagerCommunity() {
   const handlePost = async (e) => {
     e.preventDefault();
     if (!user.estateId) return;
+    if (isPosting) return;
 
+    setIsPosting(true);
     try {
         const payload = {
             ...newPost,
@@ -91,11 +96,26 @@ export default function ManagerCommunity() {
         setAnnouncements(prev => [localPost, ...prev]);
         setIsCreating(false);
         setNewPost({ title: '', content: '', type: 'news', priority: 'normal', target: 'all', targetTenantId: '' });
+        addToast("Announcement posted successfully", "success");
 
     } catch (err) {
         console.error("Error creating announcement", err);
-        alert("Failed to post announcement");
+        addToast("Failed to post announcement", "error");
+    } finally {
+        setIsPosting(false);
     }
+  };
+
+  const handleDelete = async (id) => {
+     if (!window.confirm("Are you sure you want to delete this announcement?")) return;
+     try {
+        await deleteDoc(doc(db, "announcements", id));
+        setAnnouncements(prev => prev.filter(a => a.id !== id));
+        addToast("Announcement deleted", "success");
+     } catch(err) {
+        console.error("Error deleting announcement:", err);
+        addToast("Failed to delete announcement", "error");
+     }
   };
 
 
@@ -206,8 +226,12 @@ export default function ManagerCommunity() {
                   />
                </div>
                <div className="flex justify-end">
-                  <button type="submit" className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800">
-                     Post Announcement
+                  <button 
+                     type="submit" 
+                     disabled={isPosting}
+                     className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                     {isPosting ? 'Posting...' : 'Post Announcement'}
                   </button>
                </div>
             </form>
@@ -231,7 +255,11 @@ export default function ManagerCommunity() {
                         </span>
                         <h3 className="font-bold text-slate-900 text-lg">{post.title}</h3>
                      </div>
-                     <button className="text-slate-400 hover:text-red-500 transition-colors">
+                     <button 
+                        onClick={() => handleDelete(post.id)}
+                        className="text-slate-400 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-slate-50"
+                        title="Delete Announcement"
+                     >
                         <Trash2 className="w-4 h-4" />
                      </button>
                   </div>
@@ -256,7 +284,7 @@ export default function ManagerCommunity() {
             </div>
          )}
       </div>
-
+      <ToastContainer toasts={toasts} remove={removeToast} />
     </div>
   );
 }

@@ -12,10 +12,12 @@ import {
   Filter
 } from 'lucide-react';
 import Loader from '../../components/ui/Loader';
+import { useToast } from '../../components/ui/Toast';
 import { cn } from '../../lib/utils';
 
 export default function ManagerFinance() {
   const { user } = useAuth();
+  const { addToast, removeToast, toasts, ToastContainer } = useToast();
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('pending'); // pending | approved | rejected
@@ -90,7 +92,7 @@ export default function ManagerFinance() {
         }
      } catch(err) {
         console.error("Error updating status:", err);
-        alert("Failed to update status");
+        addToast("Failed to update status", "error");
      } finally {
         setProcessingId(null);
      }
@@ -271,7 +273,7 @@ export default function ManagerFinance() {
              </div>
          </div>
       )}
-
+      <ToastContainer toasts={toasts} remove={removeToast} />
     </div>
   );
 }

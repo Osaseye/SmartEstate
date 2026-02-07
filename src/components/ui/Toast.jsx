@@ -45,7 +45,28 @@ export const ToastContainer = ({ toasts, remove }) => {
 export const useToast = () => {
     const [toasts, setToasts] = useState([]);
 
-    const addToast = ({ type = 'info', title, message, duration = 3000 }) => {
+    const addToast = (arg1, arg2) => {
+        let type = 'info';
+        let title = '';
+        let message = '';
+        let duration = 3000;
+
+        if (typeof arg1 === 'string') {
+             message = arg1;
+             if (arg2) type = arg2;
+             
+             if (type === 'success') title = 'Success';
+             else if (type === 'error') title = 'Error';
+             else if (type === 'warning') title = 'Warning';
+             else title = 'Notification';
+        } else if (typeof arg1 === 'object') {
+             const opts = arg1;
+             type = opts.type || 'info';
+             title = opts.title || '';
+             message = opts.message || '';
+             if (opts.duration) duration = opts.duration;
+        }
+
         const id = Math.random().toString(36).substring(2, 9);
         setToasts(prev => [...prev, { id, type, title, message }]);
         
@@ -60,5 +81,5 @@ export const useToast = () => {
         setToasts(prev => prev.filter(t => t.id !== id));
     };
 
-    return { toasts, addToast, removeToast };
+    return { toasts, addToast, removeToast, ToastContainer };
 };

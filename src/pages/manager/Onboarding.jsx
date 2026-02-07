@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../lib/firebase';
 import { uploadFile } from '../../lib/storage';
+import { useToast } from '../../components/ui/Toast';
 import { collection, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function ManagerOnboarding() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { addToast, removeToast, toasts, ToastContainer } = useToast();
   
   // Initialize from sessionStorage if available to handle reloads for step persistence?
   // User asked: "on reload or refresh you should start the process again"
@@ -107,7 +109,7 @@ export default function ManagerOnboarding() {
        setStep(3); // Success step
     } catch (error) {
        console.error("Error creating estate:", error);
-       alert("Failed to create estate. Please try again.");
+       addToast("Failed to create estate. Please try again.", "error");
     } finally {
        setLoading(false);
     }
@@ -363,6 +365,7 @@ export default function ManagerOnboarding() {
           </div>
         )}
       </div>
+      <ToastContainer toasts={toasts} remove={removeToast} />
     </div>
   );
 }

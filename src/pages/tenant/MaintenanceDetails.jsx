@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { db } from '../../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import { FaChevronRight, FaCalendar, FaMapMarkerAlt, FaToolbox, FaCheckCircle, FaClock, FaExclamationCircle } from 'react-icons/fa';
@@ -14,8 +15,11 @@ const STATUS_CONFIG = {
 
 const MaintenanceDetails = () => {
   const { id } = useParams();
+  const { user } = useAuth();
   const [ticket, setTicket] = useState(null);   
   const [loading, setLoading] = useState(true);
+
+  const basePath = user?.role === 'manager' ? '/manager/maintenance' : '/tenant/maintenance';
 
   useEffect(() => {
     const fetchTicket = async () => {

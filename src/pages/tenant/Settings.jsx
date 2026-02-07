@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { doc, updateDoc } from 'firebase/firestore'; 
 import { db } from '../../lib/firebase';
+import { useToast } from '../../components/ui/Toast';
 import { 
   LucideUser, 
   LucideLock, 
@@ -16,9 +17,9 @@ import { FaSpinner } from 'react-icons/fa';
 
 const Settings = () => {
   const { user } = useAuth();
+  const { addToast, removeToast, toasts, ToastContainer } = useToast();
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
 
   // Form States
   const [profileData, setProfileData] = useState({
@@ -60,11 +61,10 @@ const Settings = () => {
         name: profileData.name,
         phone: profileData.phone
       });
-      setSuccessMsg('Profile updated successfully');
-      setTimeout(() => setSuccessMsg(''), 3000);
+      addToast('Profile updated successfully', 'success');
     } catch(err) {
       console.error(err);
-      alert('Failed to update profile');
+      addToast('Failed to update profile', 'error');
     } finally {
       setLoading(false);
     }
@@ -73,16 +73,15 @@ const Settings = () => {
   const handlePasswordUpdate = (e) => {
     e.preventDefault();
     if (passwordData.new !== passwordData.confirm) {
-      alert("New passwords do not match");
+        addToast("New passwords do not match", "error");
       return;
     }
     
     setLoading(true);
     // Real password update requires re-authentication with current password
     setTimeout(() => {
-        setSuccessMsg('Password changed successfully (Simulation)');
+        addToast('Password changed successfully (Simulation)', 'success');
         setPasswordData({ current: '', new: '', confirm: '' });
-        setTimeout(() => setSuccessMsg(''), 3000);
         setLoading(false);
     }, 1000);
   };
@@ -132,12 +131,6 @@ const Settings = () => {
         {/* Content Area */}
         <div className="flex-1">
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 md:p-8">
-             
-             {successMsg && (
-               <div className="bg-green-50 text-green-600 px-4 py-3 rounded-xl mb-6 flex items-center gap-2 text-sm font-bold border border-green-100">
-                 <LucideCheckCircle className="w-4 h-4" /> {successMsg}
-               </div>
-             )}
 
              {/* Profile Tab */}
              {activeTab === 'profile' && (
@@ -299,6 +292,7 @@ const Settings = () => {
           </div>
         </div>
       </div>
+      <ToastContainer toasts={toasts} remove={removeToast} />
     </div>
   );
 };
