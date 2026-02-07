@@ -116,27 +116,6 @@ export default function Login() {
           Don't have an account? 
           <Link to="/register" className="text-primary font-bold hover:underline ml-1">Create account</Link>
         </p>
-
-        {/* Demo Credentials Helper */}
-        <div className="mt-8 pt-6 border-t border-gray-100">
-           <p className="text-xs text-center text-gray-400 uppercase font-bold tracking-wider mb-3">Demo Credentials</p>
-           <div className="grid grid-cols-2 gap-3">
-              <button 
-                type="button"
-                onClick={() => setFormData({email: 'manager@test.com', password: 'password'})}
-                className="text-xs bg-gray-50 hover:bg-gray-100 p-2 rounded text-gray-600 border border-gray-200 transition-colors"
-              >
-                Manager: manager@test.com
-              </button>
-              <button 
-                type="button"
-                onClick={() => setFormData({email: 'tenant@test.com', password: 'password'})}
-                className="text-xs bg-gray-50 hover:bg-gray-100 p-2 rounded text-gray-600 border border-gray-200 transition-colors"
-              >
-                Tenant: tenant@test.com
-              </button>
-           </div>
-        </div>
       </form>
     </AuthLayout>
   );

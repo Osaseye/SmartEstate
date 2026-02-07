@@ -30,18 +30,6 @@ const initialData = {
       employer: 'Tech Corp',
       nextOfKin: 'John Tenant (Father)'
     },
-    {
-      id: 'u4',
-      name: 'Michael Scott',
-      email: 'michael@dunder.com',
-      password: 'password',
-      role: 'tenant',
-      estateId: 'e2', // Pending in Banana Island
-      verificationStatus: 'pending',
-      proofOfIdentity: 'https://images.unsplash.com/photo-1544717305-2782549b5136?q=80&w=200&auto=format&fit=crop',
-      employer: 'Dunder Mifflin',
-      nextOfKin: 'Dwight Schrute (Colleague)'
-    },
   ],
   estates: [
     {
@@ -198,8 +186,8 @@ const initialData = {
     }
   ],
   visitors: [
-    { id: 'v1', name: 'John Doe', code: '8291', status: 'active', expires: '2025-02-02 18:00', type: 'Guest' },
-    { id: 'v2', name: 'Delivery Driver', code: '1120', status: 'expired', expires: '2025-01-20 14:00', type: 'Delivery' }
+    { id: 'v1', name: 'John Doe', code: '8291', status: 'active', expiresAt: Date.now() + 86400000, type: 'Guest' },
+    { id: 'v2', name: 'Delivery Driver', code: '1120', status: 'expired', expiresAt: Date.now() - 86400000, type: 'Delivery' }
   ],
   auth: null, // Current logged in user session
 };

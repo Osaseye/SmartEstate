@@ -99,6 +99,51 @@ export default function ManagerSettings() {
                 
                 {activeTab === 'profile' && (
                    <form onSubmit={handleSave} className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                         <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-2">Full Name</label>
+                            <input 
+                               type="text" 
+                               className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10"
+                               value={profileData.name}
+                               onChange={e => setProfileData({...profileData, name: e.target.value})}
+                            />
+                         </div>
+                         <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-2">Email Address</label>
+                            <input 
+                               type="email" 
+                               disabled
+                               className="w-full p-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 cursor-not-allowed"
+                               value={profileData.email}
+                            />
+                         </div>
+                      </div>
+                      <div className="pt-4 flex justify-between items-center">
+                          <button 
+                             // Mobile Logout
+                             type="button"
+                             onClick={() => {
+                                 // Assuming logout logic is available via context, but we need to pass it or useAuth again 
+                                 // (Note: we destructured login above, let's grab logout too - need to edit import line first if used)
+                                 window.location.href = '/login'; 
+                             }}
+                             className="md:hidden flex items-center gap-2 text-red-600 font-bold text-sm bg-red-50 px-4 py-2 rounded-lg"
+                          >
+                             <LogOut className="w-4 h-4" /> Log Out
+                          </button>
+
+                          <button 
+                            type="submit" 
+                            disabled={isSaving}
+                            className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-colors ml-auto shadow-lg shadow-slate-200"
+                          >
+                             <Save className="w-4 h-4" /> {isSaving ? 'Saving...' : 'Save Changes'}
+                          </button>
+                      </div>
+                   </form>
+                )}
+                   <form onSubmit={handleSave} className="space-y-6">
                       <h3 className="text-lg font-bold text-slate-900 mb-6">Personal Information</h3>
                       <div className="grid grid-cols-2 gap-6">
                          <div>

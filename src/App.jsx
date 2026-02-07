@@ -12,6 +12,7 @@ import TenantOnboarding from './pages/tenant/Onboarding';
 import ManagerDashboard from './pages/manager/Dashboard';
 import ManagerProperties from './pages/manager/Properties';
 import ManagerTenants from './pages/manager/Tenants';
+import TenantRequestDetails from './pages/manager/TenantRequestDetails';
 import ManagerMaintenance from './pages/manager/Maintenance';
 import ManagerFinance from './pages/manager/Payments';
 import ManagerCommunity from './pages/manager/Community';
@@ -52,6 +53,7 @@ const ProtectedRoute = ({ children, allowedRole }) => {
 
 function App() {
   return (
+    <>
     <Routes>
       {/* Public Routes */}
       <Route path="/" element={<Landing />} />
@@ -80,6 +82,7 @@ function App() {
         <Route path="properties/new" element={<AddUnit />} />
         <Route path="properties/:id" element={<PropertyDetails />} />
         <Route path="tenants" element={<ManagerTenants />} />
+        <Route path="tenants/request/:id" element={<TenantRequestDetails />} />
         <Route path="maintenance" element={<ManagerMaintenance />} />
         <Route path="payments" element={<ManagerFinance />} />
         <Route path="community" element={<ManagerCommunity />} />
@@ -115,6 +118,7 @@ function App() {
          <Route path="dashboard" element={<Navigate to="/tenant" replace />} />
       </Route>
     </Routes>
+    </>
   );
 }
 

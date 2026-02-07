@@ -105,7 +105,15 @@ const Settings = () => {
     <div className="space-y-8 animate-in fade-in duration-500 max-w-4xl mx-auto pb-20">
       
       <div className="space-y-2">
-         <h1 className="text-3xl font-bold font-display text-slate-900">Account Settings</h1>
+         <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold font-display text-slate-900">Account Settings</h1>
+            <button 
+                onClick={() => window.location.href = '/login'}
+                className="md:hidden px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-bold flex items-center gap-2 border border-red-100"
+            >
+                <LucideUser className="w-3 h-3" /> Log Out
+            </button>
+         </div>
          <p className="text-slate-500">Manage your profile, security preferences and notifications.</p>
       </div>
 

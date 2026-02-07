@@ -57,9 +57,9 @@ export default function AuthLayout({ children, title, subtitle, backLink = "/" }
             display: none;
           }
         `}</style>
-        <div className="min-h-full flex flex-col justify-center px-6 sm:px-12 lg:px-24 py-12">
+        <div className="min-h-full flex flex-col justify-center px-6 sm:px-12 lg:px-24 py-12 pt-24 lg:pt-12">
           {/* Mobile Header */}
-          <div className="lg:hidden absolute top-8 left-6">
+          <div className="lg:hidden absolute top-8 left-6 z-20">
              <Link to="/" className="flex items-center gap-2">
                 <img src="/icon.png" alt="Logo" className="h-8 w-auto" />
                 <span className="font-display font-bold text-xl text-gray-900">SmartEstate</span>

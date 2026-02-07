@@ -219,7 +219,7 @@ export default function DashboardLayout() {
 
       {/* Mobile Bottom Navigation - Floating Pill */}
       <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full px-4 flex justify-center pointer-events-none">
-        <div className="pointer-events-auto bg-white/80 backdrop-blur-md border border-white/40 shadow-2xl shadow-slate-900/20 rounded-2xl px-2 py-2 flex items-center justify-between gap-1 w-auto min-w-[280px] max-w-[95vw] ring-1 ring-white/50 overflow-x-auto no-scrollbar">
+        <div className="pointer-events-auto bg-white/90 backdrop-blur-xl border border-white/40 shadow-2xl shadow-slate-900/20 rounded-2xl p-2 flex items-center justify-between gap-1 sm:gap-2 w-auto max-w-[calc(100vw-2rem)] ring-1 ring-white/50 overflow-x-auto no-scrollbar">
           {items.map((item) => (
             <NavLink    
               key={item.path}

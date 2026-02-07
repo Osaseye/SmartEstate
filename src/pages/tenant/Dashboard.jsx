@@ -68,6 +68,26 @@ const VisitorCard = ({ visitor }) => (
     </div>
 );
 
+const VisitorTimer = ({ expiresAt, status }) => {
+  const [timeLeft, setTimeLeft] = useState(Math.max(0, expiresAt - Date.now()));
+
+  useEffect(() => {
+    if (status !== 'active') return;
+    const timer = setInterval(() => {
+      setTimeLeft(Math.max(0, expiresAt - Date.now()));
+    }, 60000);
+    return () => clearInterval(timer);
+  }, [expiresAt, status]);
+
+  if (status !== 'active') return <span className="text-slate-500 text-[10px] uppercase font-bold">{status}</span>;
+  if (timeLeft <= 0) return <span className="text-red-400 text-[10px] font-bold">EXPIRED</span>;
+  
+  const hours = Math.floor(timeLeft / (3600000));
+  const minutes = Math.floor((timeLeft % 3600000) / 60000);
+  
+  return <span className="text-emerald-400 text-[10px] uppercase font-bold">{hours}h {minutes}m left</span>;
+};
+
 const TenantDashboard = () => {
   const { user } = useAuth();
   const [estate, setEstate] = useState(null);
@@ -101,7 +121,7 @@ const TenantDashboard = () => {
          name: 'New Guest',
          code: code,
          status: 'active',
-         expires: '24h',
+         expiresAt: Date.now() + 24 * 60 * 60 * 1000,
          type: 'Guest'
      };
      setVisitors(prev => [newVisitor, ...prev]);
