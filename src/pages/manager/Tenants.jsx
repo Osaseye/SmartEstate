@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { MockService } from '../../services/mockService';
+import { db } from '../../lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { 
   Search, 
   Filter, 
@@ -27,26 +28,29 @@ export default function Tenants() {
     fetchData();
   }, [user]);
 
-  const fetchData = () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const data = MockService.getAll();
-      const myEstate = data.estates.find(e => e.managerId === user.id);
-      
-      if (myEstate) {
-        // 1. Get all users linked to this estate
-        const estateUsers = data.users.filter(u => u.estateId === myEstate.id && u.role === 'tenant');
-        
-        // 2. Separate by status
-        setTenants(estateUsers.filter(u => u.verificationStatus === 'verified'));
-        
-        // 3. Get Pending Requests
-        setPendingRequests(estateUsers.filter(u => u.verificationStatus === 'pending'));
+      if (!user.estateId) {
+         setLoading(false);
+         return;
       }
+      
+      // 1. Get all users linked to this estate
+      const q = query(collection(db, "users"), where("estateId", "==", user.estateId), where("role", "==", "tenant"));
+      const snapshot = await getDocs(q);
+      const estateUsers = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+        
+      // 2. Separate by status
+      setTenants(estateUsers.filter(u => u.verificationStatus === 'verified'));
+        
+      // 3. Get Pending Requests
+      setPendingRequests(estateUsers.filter(u => u.verificationStatus === 'pending'));
+
     } catch (err) {
       console.error(err);
     } finally {
-      setTimeout(() => setLoading(false), 500);
+      setLoading(false);
     }
   };
 

@@ -1,57 +1,90 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { MockService } from '../../services/mockService';
-import { ChevronRight, Home, Building2 } from 'lucide-react';
+import { useToast, ToastContainer } from '../../components/ui/Toast';
+import { db } from '../../lib/firebase';
+import { doc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { ChevronRight, Home, Building2, Banknote, Calendar } from 'lucide-react';
 
 export default function AddUnit() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { addToast } = useToast();
   const [estate, setEstate] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [newUnit, setNewUnit] = useState({
     block: '',
     number: '',
     type: 'Apartment', 
     bedrooms: '2',
-    status: 'vacant'
+    status: 'vacant',
+    rentAmount: '',
+    rentDueDate: '1' // Day of month (1-31)
   });
 
   useEffect(() => {
-    try {
-      const data = MockService.getAll();
-      const myEstate = data.estates.find(e => e.managerId === user.id);
-      if (myEstate) {
-        setEstate(myEstate);
+    const fetchEstate = async () => {
+      try {
+        if (!user.estateId) return;
+        const estateDoc = await getDoc(doc(db, "estates", user.estateId));
+        if (estateDoc.exists()) {
+           setEstate({ id: estateDoc.id, ...estateDoc.data() });
+        }
+      } catch (err) {
+        console.error(err);
       }
-    } catch (err) {
-      console.error(err);
-    }
+    };
+    fetchEstate();
   }, [user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!estate) return;
+    if (isSubmitting) return;
 
-    const unitName = newUnit.block 
-      ? `Block ${newUnit.block}, Unit ${newUnit.number}` 
-      : `Unit ${newUnit.number}`;
+    setIsSubmitting(true);
+
+    // Construct Name based on Structure Type
+    let unitName = '';
+    if (estate.structure === 'blocks') {
+       unitName = `Block ${newUnit.block}, Unit ${newUnit.number}`;
+    } else {
+       unitName = `${newUnit.number} ${newUnit.block}`; // e.g. 15 Admiralty Way
+    }
+    
+    // Fallback if empty (should be validated in UI)
+    if (!unitName.trim()) unitName = `Unit ${newUnit.number}`;
 
     const payload = {
       ...newUnit,
       name: unitName,
       estateId: estate.id,
-      tenantId: null 
+      tenantId: null,
+      tenantName: null,
+      status: 'vacant',
+      createdAt: serverTimestamp()
     };
 
-    // Simulate API call
-    await new Promise(r => setTimeout(r, 500));
-    MockService.addHouse(payload);
-    
-    navigate('/manager/properties');
+    try {
+        await addDoc(collection(db, "properties"), payload);
+        addToast({ type: 'success', title: 'Unit Created', message: `${unitName} has been added successfully.` });
+        
+        // Short delay to allow toast to be seen before nav (optional, but nice)
+        setTimeout(() => {
+           navigate('/manager/properties');
+        }, 1000);
+    } catch (error) {
+        console.error("Error adding property:", error);
+        addToast({ type: 'error', title: 'Creation Failed', message: error.message });
+        setIsSubmitting(false); // Re-enable button on error
+    }
   };
 
+  if (!estate) return <div>Loading...</div>;
+
   return (
+    <>
     <div className="space-y-8 animate-in fade-in duration-500">
        
        {/* Breadcrumbs */}
@@ -68,29 +101,33 @@ export default function AddUnit() {
              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100 shadow-sm text-slate-400">
                 <Building2 className="w-8 h-8" />
              </div>
-             <h1 className="text-2xl font-bold font-display text-slate-900">Add New Unit</h1>
-             <p className="text-slate-500">Define the details for a new property unit.</p>
+             <h1 className="text-2xl font-bold font-display text-slate-900">Add New Property</h1>
+             <p className="text-slate-500">Define the details for a new unit in {estate.name}.</p>
           </div>
 
           <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
              <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-2 gap-6">
                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Block / Street</label>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2">
+                        {estate.structure === 'blocks' ? 'Block Name' : 'Street Name'}
+                      </label>
                       <input 
                          type="text" 
-                         placeholder="e.g. Block A"
+                         placeholder={estate.structure === 'blocks' ? "e.g. Block A" : "e.g. Admiralty Way"}
                          className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-semibold focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
                          value={newUnit.block}
                          onChange={(e) => setNewUnit({...newUnit, block: e.target.value})}
                       />
                    </div>
                    <div>
-                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Unit Number</label>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2">
+                        {estate.structure === 'blocks' ? 'Unit Number' : 'House Number'}
+                      </label>
                       <input 
                          type="text" 
                          required
-                         placeholder="e.g. 101"
+                         placeholder={estate.structure === 'blocks' ? "e.g. 101" : "e.g. 15"}
                          className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-semibold focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
                          value={newUnit.number}
                          onChange={(e) => setNewUnit({...newUnit, number: e.target.value})}
@@ -112,6 +149,7 @@ export default function AddUnit() {
                             <option>Villa</option>
                             <option>Bungalow</option>
                             <option>Penthouse</option>
+                            {/* Shared Housing Check: If estate allows shared logic in future, add 'Room' here */}
                          </select>
                          <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                             <ChevronRight className="w-4 h-4 rotate-90" />
@@ -136,6 +174,36 @@ export default function AddUnit() {
                             <ChevronRight className="w-4 h-4 rotate-90" />
                          </div>
                       </div>
+                   </div>
+                </div>
+                
+                {/* Rent & Due Date Section */}
+                <div className="grid grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+                   <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-1">
+                         <Banknote className="w-3 h-3" /> Annual Rent (₦)
+                      </label>
+                      <input 
+                         type="number" 
+                         placeholder="e.g. 2500000"
+                         className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-semibold focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all outline-none"
+                         value={newUnit.rentAmount}
+                         onChange={(e) => setNewUnit({...newUnit, rentAmount: e.target.value})}
+                      />
+                   </div>
+                   <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-1">
+                         <Calendar className="w-3 h-3" /> Default Due Day
+                      </label>
+                      <select 
+                         className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-sm appearance-none outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                         value={newUnit.rentDueDate}
+                         onChange={(e) => setNewUnit({...newUnit, rentDueDate: e.target.value})}
+                      >
+                         {Array.from({length: 31}, (_, i) => i + 1).map(day => (
+                            <option key={day} value={day}>{day}{day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th'} of month</option>
+                         ))}
+                      </select>
                    </div>
                 </div>
 
@@ -168,14 +236,17 @@ export default function AddUnit() {
                    </Link>
                    <button 
                       type="submit" 
-                      className="flex-1 py-4 bg-primary text-white font-bold rounded-xl hover:bg-sky-600 hover:shadow-lg hover:shadow-primary/20 transition-all transform active:scale-95"
+                      disabled={isSubmitting}
+                      className="flex-1 py-4 bg-primary text-white font-bold rounded-xl hover:bg-sky-600 hover:shadow-lg hover:shadow-primary/20 transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                    >
-                      Create Unit
+                      {isSubmitting ? 'Creating...' : 'Create Unit'}
                    </button>
                 </div>
              </form>
           </div>
        </div>
     </div>
+    <ToastContainer toasts={toasts} remove={removeToast} />
+    </>
   );
 }

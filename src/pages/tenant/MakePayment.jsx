@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { MockService } from '../../services/mockService';
+import { db } from '../../lib/firebase';
+import { uploadFile } from '../../lib/storage';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
 import { FaFileUpload, FaFileAlt, FaChevronRight } from 'react-icons/fa';
 
@@ -25,35 +27,37 @@ const MakePayment = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedFile || !amount) return;
 
     setUploading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      const data = MockService.getAll();
-      const newPayment = {
-        id: `p${Date.now()}`,
-        date: new Date().toISOString().split('T')[0],
-        description: 'Payment Uploaded',
-        amount: parseFloat(amount), 
-        status: 'pending',
-        tenantId: user.id,
-        proofFile: selectedFile.name
-      };
+    try {
+        // Upload proof file first
+        const fileUrl = await uploadFile(selectedFile, 'payments');
 
-      // Update local data
-      const updatedPayments = [newPayment, ...(data.payments || [])];
-      data.payments = updatedPayments;
-      
-      MockService.update(data);
-      
-      setUploading(false);
-      alert('Payment proof uploaded successfully!');
-      navigate('/tenant/payments');
-    }, 1500);
+        const newPayment = {
+            date: new Date().toISOString().split('T')[0],
+            description: 'Payment Uploaded',
+            amount: parseFloat(amount), 
+            status: 'pending',
+            tenantId: user.uid || user.id,
+            estateId: user.estateId,
+            proofFile: fileUrl || '', 
+            createdAt: serverTimestamp()
+        };
+
+        await addDoc(collection(db, "payments"), newPayment);
+        
+        setUploading(false);
+        alert('Payment proof uploaded successfully!');
+        navigate('/tenant/payments');
+    } catch (err) {
+        console.error("Error creating payment:", err);
+        setUploading(false);
+        alert('Failed to submit payment.');
+    }
   };
 
   return (

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { MockService } from '../../services/mockService';
+import { db } from '../../lib/firebase';
+import { uploadFile } from '../../lib/storage';
+import { collection, getDocs, orderBy, query, doc, updateDoc, onSnapshot } from 'firebase/firestore'; 
 
 export default function TenantOnboarding() {
   const navigate = useNavigate();
@@ -12,31 +14,71 @@ export default function TenantOnboarding() {
   const [search, setSearch] = useState('');
   const [selectedEstate, setSelectedEstate] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [idFile, setIdFile] = useState(null);
   
   // Personal Info State
   const [personalInfo, setPersonalInfo] = useState({
     dob: '',
     stateOfOrigin: '',
     nationality: '',
-    phone: user?.phone || '', // Pre-fill if available
+    phone: '', 
     gender: 'Select'
   });
 
+  // Load saved state (Persistence)
   useEffect(() => {
-    // Load estates
-    const data = MockService.getEstates();
-    setEstates(data);
-
-    // Auto-select estate logic (now happens at step 2, but we can pre-select)
-    if (user?.estateCode) {
-      const foundEstate = data.find(e => e.code === user.estateCode);
-      if (foundEstate) {
-        setSelectedEstate(foundEstate);
-        // If code provided, we might still want them to fill personal info first
-        // So we keep step 1, but maybe auto-advance if they already filled it? 
-        // For now, let's make them fill info, then step 2 will be auto-skipped or pre-filled.
-      }
+    const saved = localStorage.getItem('tenantOnboarding');
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            if (parsed.step) setStep(parsed.step);
+            if (parsed.personalInfo) setPersonalInfo(parsed.personalInfo);
+            if (parsed.selectedEstate) setSelectedEstate(parsed.selectedEstate);
+        } catch (e) {
+            console.error(e);
+        }
     }
+  }, []);
+
+  // Save state on change
+  useEffect(() => {
+    const toSave = {
+        step,
+        personalInfo,
+        selectedEstate
+    };
+    localStorage.setItem('tenantOnboarding', JSON.stringify(toSave));
+  }, [step, personalInfo, selectedEstate]);
+
+  // Sync user phone if available and not yet set
+  useEffect(() => {
+      if (user?.phone && !personalInfo.phone) {
+          setPersonalInfo(prev => ({ ...prev, phone: user.phone }));
+      }
+  }, [user]);
+
+  useEffect(() => {
+    // Load estates from Firestore instead of MockService
+    const fetchEstates = async () => {
+       try {
+         const q = query(collection(db, "estates"), orderBy("name"));
+         const snapshot = await getDocs(q);
+         const estatesList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+         setEstates(estatesList);
+         
+         // Auto-select logic if estateCode is pre-filled (future feature)
+         if (user?.estateCode) {
+            const foundEstate = estatesList.find(e => e.code === user.estateCode);
+            if (foundEstate) {
+               setSelectedEstate(foundEstate);
+            }
+         }
+       } catch (error) {
+         console.error("Error fetching estates:", error);
+       }
+    };
+
+    fetchEstates();
   }, [user]);
 
   const filteredEstates = estates.filter(e =>  
@@ -47,24 +89,56 @@ export default function TenantOnboarding() {
   const handlePersonalInfoSubmit = (e) => {
     e.preventDefault();
     if(selectedEstate && user?.estateCode) {
-        setStep(3); // Skip search if already has code
+        setStep(3); 
     } else {
         setStep(2);
     }
   };
 
+
   const handleJoin = async () => {
+    if (!idFile) {
+        alert("Please upload a valid ID to proceed.");
+        return;
+    }
+
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Longer delay for effect
     
-    MockService.requestAccess(selectedEstate.id);
-    setLoading(false);
-    setStep(4); // Move to Success State
+    try {
+      // 0. Upload ID Document
+      const idUrl = await uploadFile(idFile, `ids/${user.uid || user.id}`);
+
+      // 1. Update user profile with personal details AND link to estate (status: pending)
+      const userRef = doc(db, "users", user.uid || user.id);
+      
+      await updateDoc(userRef, {
+         phone: personalInfo.phone,
+         dob: personalInfo.dob,
+         gender: personalInfo.gender,
+         stateOfOrigin: personalInfo.stateOfOrigin,
+         nationality: personalInfo.nationality,
+         estateId: selectedEstate.id,
+         verificationStatus: 'pending',
+         hasCompletedOnboarding: true,
+         idDocumentUrl: idUrl
+      });
+
+      // Clear persistence
+      localStorage.removeItem('tenantOnboarding');
+
+      // 2. Success state
+      setStep(4);
+      
+    } catch (error) {
+       console.error("Error joining estate:", error);
+       alert("Failed to join estate. Please try again.");
+    } finally {
+       setLoading(false);
+    }
   };
   
   const handleFinish = () => {
-    navigate('/tenant/dashboard');
-    window.location.reload();
+    navigate('/tenant/pending'); // Redirect to pending status page instead of dashboard
   }
 
   return (
@@ -261,11 +335,30 @@ export default function TenantOnboarding() {
 
 
                <div>
-                 <label className="block text-sm font-medium text-gray-700 mb-2">Upload Valid ID (Govt Issued)</label>
-                 <div className="border-2 border-dashed border-gray-200 rounded-xl p-10 text-center hover:bg-gray-50 hover:border-secondary/30 transition-colors cursor-pointer group">
-                    <span className="material-icons-round text-4xl text-gray-300 mb-3 group-hover:text-secondary group-hover:scale-110 transition-all">cloud_upload</span>
-                    <p className="text-sm text-gray-600 font-medium">Click to upload or drag and drop</p>
-                    <p className="text-xs text-gray-400 mt-2">JPG, PNG or PDF (Max 5MB)</p>
+                 <label className="block text-sm font-medium text-gray-700 mb-2">Upload Valid ID (Govt Issued) <span className="text-red-500">*</span></label>
+                 <div className="relative">
+                    <input 
+                        type="file" 
+                        accept="image/*,.pdf"
+                        required
+                        onChange={(e) => setIdFile(e.target.files[0])}
+                        className="opacity-0 absolute inset-0 z-10 w-full h-full cursor-pointer"
+                    />
+                    <div className={`border-2 border-dashed rounded-xl p-10 text-center transition-colors ${idFile ? 'bg-green-50 border-green-200' : 'border-gray-200 hover:bg-gray-50 hover:border-secondary/30'}`}>
+                        {idFile ? (
+                            <>
+                                <span className="material-icons-round text-4xl text-green-500 mb-3">check_circle</span>
+                                <p className="text-sm text-green-700 font-medium">{idFile.name}</p>
+                                <p className="text-xs text-green-600 mt-2">Click to change</p>
+                            </>
+                        ) : (
+                            <>
+                                <span className="material-icons-round text-4xl text-gray-300 mb-3">cloud_upload</span>
+                                <p className="text-sm text-gray-600 font-medium">Click to upload or drag and drop</p>
+                                <p className="text-xs text-gray-400 mt-2">JPG, PNG or PDF (Max 5MB)</p>
+                            </>
+                        )}
+                    </div>
                  </div>
                </div>
 

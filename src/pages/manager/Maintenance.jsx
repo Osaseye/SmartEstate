@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { MockService } from '../../services/mockService';
+import { db } from '../../lib/firebase';
+import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore'; 
 import { 
   Wrench, 
   Filter, 
@@ -24,35 +25,78 @@ export default function ManagerMaintenance() {
     fetchData();
   }, [user]);
 
-  const fetchData = () => {
+  const fetchData = async () => {
+    if (!user) return;
     setLoading(true);
     try {
-      const data = MockService.getAll();
-      const myEstate = data.estates.find(e => e.managerId === user.id);
+      // 1. Find the estate managed by this user
+      const estateQuery = query(collection(db, "estates"), where("managerId", "==", user.uid));
+      const estateSnapshot = await getDocs(estateQuery);
       
-      if (myEstate) {
-        // Find tenants in my estate
-        const tenantIds = data.users
-            .filter(u => u.estateId === myEstate.id)
-            .map(u => u.id);
+      if (!estateSnapshot.empty) {
+        const myEstate = { id: estateSnapshot.docs[0].id, ...estateSnapshot.docs[0].data() };
         
-        // Filter maintenance requests from these tenants
-        const estateRequests = (data.maintenance || []).filter(m => tenantIds.includes(m.tenantId));
+        // 2. Fetch all Properties in this estate to map Tenant ID -> Unit Name
+        const propQuery = query(collection(db, "properties"), where("estateId", "==", myEstate.id));
+        const propSnap = await getDocs(propQuery);
+        const tenantToUnitMap = {};
+        propSnap.docs.forEach(d => {
+            const data = d.data();
+            if (data.tenantId) {
+                tenantToUnitMap[data.tenantId] = data.name; // e.g. "Flat 4B"
+            }
+        });
+
+        // 3. Fetch all Users (Tenants) in this estate (Optional: for names)
+        // Alternatively, we can rely on data on the ticket if we had it, but we need to fetch users to get names if they aren't on ticket
+        // For efficiency, let's fetch users who are in this estate
+        const usersQuery = query(collection(db, "users"), where("estateId", "==", myEstate.id));
+        const usersSnap = await getDocs(usersQuery);
+        const userMap = {};
+        usersSnap.docs.forEach(d => {
+            userMap[d.id] = d.data();
+        });
+
+        // 4. Fetch Maintenance Requests
+        const maintQuery = query(collection(db, "maintenance"), where("estateId", "==", myEstate.id));
+        const maintSnap = await getDocs(maintQuery);
         
-        // Enrich with tenant details
-        const enrichedRequests = estateRequests.map(req => {
-            const tenant = data.users.find(u => u.id === req.tenantId);
-            const unit = data.houses.find(h => h.tenantId === req.tenantId); // Simplified finding unit via tenant
-            return { ...req, tenant, unit };
+        const enrichedRequests = maintSnap.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                tenant: userMap[data.tenantId] || { name: 'Unknown' },
+                unit: { name: tenantToUnitMap[data.tenantId] || 'N/A' }
+            };
+        });
+
+        // Sort by date descending
+        enrichedRequests.sort((a,b) => {
+             const dateA = a.createdAt?.seconds || 0;
+             const dateB = b.createdAt?.seconds || 0;
+             return dateB - dateA;
         });
 
         setRequests(enrichedRequests);
       }
     } catch (err) {
-      console.error(err);
+      console.error("Error fetching maintenance requests:", err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleStatusUpdate = async (ticketId, newStatus) => {
+      try {
+          const ticketRef = doc(db, "maintenance", ticketId);
+          await updateDoc(ticketRef, { status: newStatus });
+          // Optimistic local update
+          setRequests(prev => prev.map(r => r.id === ticketId ? {...r, status: newStatus} : r));
+      } catch(err) {
+          console.error("Error updating status:", err);
+          alert("Failed to update status");
+      }
   };
 
   const getStatusColor = (status) => {
@@ -148,8 +192,11 @@ export default function ManagerMaintenance() {
                   </span>
                </div>
 
-               <button className="w-full py-2 bg-slate-50 text-slate-600 font-bold rounded-lg text-sm hover:bg-slate-100 transition-colors">
-                  View Details
+               <button 
+                  onClick={() => handleStatusUpdate(req.id, req.status === 'pending' ? 'in-progress' : 'resolved')}
+                  className="w-full py-2 bg-slate-50 text-slate-600 font-bold rounded-lg text-sm hover:bg-slate-100 transition-colors"
+               >
+                  {req.status === 'pending' ? 'Mark In Progress' : req.status === 'in-progress' ? 'Mark Resolved' : 'View Details'}
                </button>
             </div>
           </div>

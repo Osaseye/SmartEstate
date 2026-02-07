@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { MockService } from '../../services/mockService';
+import { db } from '../../lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
 import { FaPlus, FaTools, FaFilter, FaCircle, FaChevronRight } from 'react-icons/fa';
 import { cn } from '../../lib/utils';
@@ -11,11 +12,25 @@ const Maintenance = () => {
   const [filter, setFilter] = useState('active'); // active | history
 
   useEffect(() => {
-    const data = MockService.getAll();
-    if (user) {
-      const userTickets = (data.maintenance || []).filter(t => t.tenantId === user.id);
-      setTickets(userTickets.sort((a, b) => new Date(b.date) - new Date(a.date)));
-    }
+    const fetchTickets = async () => {
+       if (user) {
+         try {
+           const idToQuery = user.uid || user.id;
+           const q = query(collection(db, "maintenance"), where("tenantId", "==", idToQuery));
+           const snapshot = await getDocs(q);
+           const userTickets = snapshot.docs.map(doc => ({id: doc.id, ...doc.data()}));
+           setTickets(userTickets.sort((a, b) => {
+               // Handle both timestamp objects and string dates if mixed
+               const dateA = a.createdAt?.seconds ? new Date(a.createdAt.seconds * 1000) : new Date(a.date);
+               const dateB = b.createdAt?.seconds ? new Date(b.createdAt.seconds * 1000) : new Date(b.date);
+               return dateB - dateA;
+           }));
+         } catch (err) {
+           console.error("Error fetching tickets:", err);
+         }
+       }
+    };
+    fetchTickets();
   }, [user]);
 
   const activeTickets = tickets.filter(t => t.status !== 'resolved');

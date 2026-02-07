@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { MockService } from '../../services/mockService';
+import { db } from '../../lib/firebase';
+import { collection, query, where, getDocs, doc, updateDoc, orderBy } from 'firebase/firestore';
 import { 
   CheckCircle,
   XCircle,
@@ -27,52 +28,72 @@ export default function ManagerFinance() {
     fetchData();
   }, [user]);
 
-  const fetchData = () => {
+  const fetchData = async () => {
+    if (!user) return;
     setLoading(true);
     try {
-      const data = MockService.getAll();
-      const myEstate = data.estates.find(e => e.managerId === user.id);
-      
-      if (myEstate) {
-        const tenantIds = data.users
-            .filter(u => u.estateId === myEstate.id)
-            .map(u => u.id);
-        
-        // Filter payments
-        const estatePayments = (data.payments || []).filter(p => tenantIds.includes(p.tenantId));
+      // 1. Fetch Estate
+      const estateQuery = query(collection(db, "estates"), where("managerId", "==", user.uid));
+      const estateSnap = await getDocs(estateQuery);
 
-        // Enrich
-        const enrichedPayments = estatePayments.map(p => ({
-           ...p,
-           tenant: data.users.find(u => u.id === p.tenantId)
-        }));
-        
-        // Sort by date desc
-        enrichedPayments.sort((a,b) => new Date(b.date) - new Date(a.date));
+      if (!estateSnap.empty) {
+        const myEstate = { id: estateSnap.docs[0].id, ...estateSnap.docs[0].data() };
+
+        // 2. Fetch Users to map names
+        const usersQuery = query(collection(db, "users"), where("estateId", "==", myEstate.id));
+        const usersSnap = await getDocs(usersQuery);
+        const userMap = {};
+        usersSnap.docs.forEach(d => userMap[d.id] = d.data());
+
+        // 3. Fetch Payments
+        const paymentsQuery = query(collection(db, "payments"), where("estateId", "==", myEstate.id));
+        const paymentsSnap = await getDocs(paymentsQuery);
+
+        const enrichedPayments = paymentsSnap.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                tenant: userMap[data.tenantId] || { name: 'Unknown' },
+                // Ensure date is handled gracefully (Timestamp or string)
+                date: data.date || (data.createdAt ? new Date(data.createdAt.seconds * 1000).toISOString().split('T')[0] : 'N/A')
+            };
+        });
+
+        // Sort descending by date
+        enrichedPayments.sort((a,b) => {
+             const dateA = a.createdAt?.seconds || (a.date ? new Date(a.date).getTime()/1000 : 0);
+             const dateB = b.createdAt?.seconds || (b.date ? new Date(b.date).getTime()/1000 : 0);
+             return dateB - dateA;
+        });
 
         setPayments(enrichedPayments);
       }
     } catch (err) {
       console.error(err);
     } finally {
-      setTimeout(() => setLoading(false), 800); // Simulate network
+      setLoading(false);
     }
   };
 
-  const handleUpdateStatus = (id, newStatus) => {
+  const handleUpdateStatus = async (id, newStatus) => {
      setProcessingId(id);
-     setTimeout(() => {
-        const data = MockService.getAll();
-        const payIndex = data.payments.findIndex(p => p.id === id);
+     try {
+        const paymentRef = doc(db, "payments", id);
+        await updateDoc(paymentRef, { status: newStatus });
         
-        if (payIndex > -1) {
-           data.payments[payIndex].status = newStatus;
-           MockService.update(data);
-           fetchData();
+        // Optimistic UI Update
+        setPayments(prev => prev.map(p => p.id === id ? {...p, status: newStatus} : p));
+        
+        if (selectedProof && selectedProof.id === id) {
+           setSelectedProof(null); // Close modal if open
         }
+     } catch(err) {
+        console.error("Error updating status:", err);
+        alert("Failed to update status");
+     } finally {
         setProcessingId(null);
-        setSelectedProof(null);
-     }, 1000);
+     }
   };
 
   const formatCurrency = (amount) => {
@@ -118,37 +139,46 @@ export default function ManagerFinance() {
                
                {/* Image Preview Area */}
                <div className="h-40 bg-slate-100 relative overflow-hidden group-hover:bg-slate-200 transition-colors cursor-pointer" onClick={() => setSelectedProof(pay)}>
-                  {pay.proofUrl ? (
-                     <img src={pay.proofUrl} alt="Proof" className="w-full h-full object-cover" />
+                  {pay.proofFile ? (
+                     pay.proofFile.toLowerCase().includes('.pdf') ? (
+                        <div className="flex flex-col items-center justify-center h-full text-slate-500">
+                           <FileText className="w-8 h-8 mb-2" />
+                           <span className="text-xs font-bold">PDF Document</span>
+                        </div>
+                     ) : (
+                        <img src={pay.proofFile} alt="Proof" className="w-full h-full object-cover" />
+                     )
                   ) : (
                      <div className="flex flex-col items-center justify-center h-full text-slate-400">
                         <FileText className="w-8 h-8 mb-2" />
                         <span className="text-xs font-bold">No Image</span>
                      </div>
                   )}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                     <span className="bg-white/90 px-3 py-1.5 rounded-full text-xs font-bold text-slate-900 flex items-center gap-2 shadow-lg scale-95 group-hover:scale-100 transition-transform">
-                        <Eye className="w-3 h-3" /> View Proof
-                     </span>
-                  </div>
+                  {pay.proofFile && (
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <span className="bg-white/90 px-3 py-1.5 rounded-full text-xs font-bold text-slate-900 flex items-center gap-2 shadow-lg scale-95 group-hover:scale-100 transition-transform">
+                            <Eye className="w-3 h-3" /> View Proof
+                        </span>
+                    </div>
+                  )}
                </div>
 
                <div className="p-6 flex-1 flex flex-col">
                   <div className="flex justify-between items-start mb-4">
                      <div>
-                        <h3 className="font-bold text-slate-900">{pay.description}</h3>
+                        <h3 className="font-bold text-slate-900 line-clamp-1" title={pay.description}>{pay.description}</h3>
                         <p className="text-sm text-slate-500">{new Date(pay.date).toLocaleDateString()}</p>
                      </div>
-                     <span className="bg-slate-50 px-2 py-1 rounded text-xs font-bold text-slate-600">
+                     <span className="bg-slate-50 px-2 py-1 rounded text-xs font-bold text-slate-600 whitespace-nowrap">
                         {formatCurrency(pay.amount)}
                      </span>
                   </div>
 
                   <div className="flex items-center gap-2 mb-6">
                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500">
-                        {pay.tenant?.name?.substring(0,2)}
+                        {pay.tenant?.name?.substring(0,2) || '??'}
                      </div>
-                     <span className="text-sm font-medium text-slate-700">{pay.tenant?.name}</span>
+                     <span className="text-sm font-medium text-slate-700 truncate">{pay.tenant?.name || 'Unknown Tenant'}</span>
                   </div>
 
                   {activeTab === 'pending' && (
@@ -201,29 +231,33 @@ export default function ManagerFinance() {
 
       {/* Proof Modal */}
       {selectedProof && (
-         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-200">
-             <div className="bg-white rounded-2xl max-w-2xl w-full overflow-hidden shadow-2xl">
+         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={(e) => e.target === e.currentTarget && setSelectedProof(null)}>
+             <div className="bg-white rounded-2xl max-w-3xl w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
                  <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                     <h3 className="font-bold text-slate-900">Proof of Payment: {selectedProof.description}</h3>
+                     <h3 className="font-bold text-slate-900">Proof of Payment</h3>
                      <button onClick={() => setSelectedProof(null)} className="text-slate-400 hover:text-slate-900">
                         <XCircle className="w-6 h-6" />
                      </button>
                  </div>
-                 <div className="aspect-video bg-black flex items-center justify-center relative">
-                     {selectedProof.proofUrl ? (
-                         <img src={selectedProof.proofUrl} className="max-h-[60vh] object-contain" />
+                 <div className="flex-1 bg-black/5 p-4 overflow-auto flex items-center justify-center">
+                     {selectedProof.proofFile ? (
+                        selectedProof.proofFile.toLowerCase().includes('.pdf') ? (
+                           <iframe src={selectedProof.proofFile} className="w-full h-[60vh] bg-white rounded-lg shadow-sm" title="PDF Proof" />
+                        ) : (
+                           <img src={selectedProof.proofFile} className="max-w-full max-h-full object-contain rounded-lg shadow-sm" alt="Proof" />
+                        )
                      ) : (
-                        <span className="text-white">No Image Available</span>
+                        <div className="text-slate-500 font-bold">No Proof File Uploaded</div>
                      )}
                  </div>
                  {selectedProof.status === 'pending' && (
-                     <div className="p-4 flex gap-4 bg-white">
+                     <div className="p-4 flex gap-4 bg-white border-t border-slate-100">
                         <button 
                            disabled={!!processingId}
                            onClick={() => handleUpdateStatus(selectedProof.id, 'rejected')}
                            className="flex-1 py-3 border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50"
                         >
-                           Decline
+                           Decline Request
                         </button>
                         <button 
                            disabled={!!processingId}

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { MockService } from '../../services/mockService';
+import { useToast, ToastContainer } from '../../components/ui/Toast';
+import { db } from '../../lib/firebase';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore'; 
 import { 
   Building2, 
   MapPin, 
@@ -15,7 +17,8 @@ import {
   CheckCircle,
   XCircle,
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  FileText
 } from 'lucide-react';
 import Loader from '../../components/ui/Loader';
 import { cn } from '../../lib/utils';
@@ -24,6 +27,7 @@ export default function TenantRequestDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { addToast } = useToast();
   
   const [request, setRequest] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -35,29 +39,32 @@ export default function TenantRequestDetails() {
     fetchData();
   }, [id, user]);
 
-  const fetchData = () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const data = MockService.getAll();
-      const myEstate = data.estates.find(e => e.managerId === user.id);
-      
-      if (myEstate) {
-        // Find the user
-        let foundUser = data.users.find(u => u.id === id);
-        
-        if (foundUser) {
-            setRequest(foundUser);
-             // Get vacant units
-            const estateUnits = (data.houses || []).filter(h => h.estateId === myEstate.id && h.status === 'vacant');
-            setVacantUnits(estateUnits);
-        } else {
-            console.error("User not found");
-        }
+      if (!user.estateId) {
+         setLoading(false);
+         return;
       }
+
+      // 1. Find the user
+      const userDoc = await getDoc(doc(db, "users", id));
+      if (userDoc.exists()) {
+          setRequest({ id: userDoc.id, ...userDoc.data() });
+      } else {
+          console.error("User not found");
+      }
+
+      // 2. Get vacant units
+      const q = query(collection(db, "properties"), where("estateId", "==", user.estateId), where("status", "==", "vacant"));
+      const snapshot = await getDocs(q);
+      const estateUnits = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+      setVacantUnits(estateUnits);
+
     } catch (err) {
       console.error(err);
     } finally {
-      setTimeout(() => setLoading(false), 500);
+      setLoading(false);
     }
   };
 
@@ -66,31 +73,31 @@ export default function TenantRequestDetails() {
     setIsProcessing(true);
 
     try {
-      await new Promise(r => setTimeout(r, 1000));
-      const data = MockService.getAll();
+      // 1. Update User Profile
+      const userRef = doc(db, "users", request.id);
+      await updateDoc(userRef, {
+          verificationStatus: 'verified',
+          houseId: assignmentUnit
+      });
 
-      // If it matches our temp ID, we actually need to REGISTER him for real in the Mock DB upon approval so he persists
-      // Or if he exists, update him.
-      let dbUserIndex = data.users.findIndex(u => u.id === request.id);
+      // 2. Update Property Status
+      const unitRef = doc(db, "properties", assignmentUnit);
+      await updateDoc(unitRef, {
+          status: 'occupied',
+          tenantId: request.id,
+          tenantName: request.name
+      });
+ddToast({
+        type: 'success',
+        title: 'Tenant Approved',
+        message: `${request.name} has been assigned to unit successfully.`
+      });
       
-      if (dbUserIndex > -1) {
-          // Existing user update
-         data.users[dbUserIndex].verificationStatus = 'verified';
-         data.users[dbUserIndex].houseId = assignmentUnit;
-         
-         const unitIndex = data.houses.findIndex(h => h.id === assignmentUnit);
-         if (unitIndex > -1) {
-            data.houses[unitIndex].status = 'occupied';
-            data.houses[unitIndex].tenantId = request.id;
-            data.houses[unitIndex].tenantName = request.name;
-         }
-      }
-
-      MockService.update(data);
-      alert("Application Approved!");
-      navigate('/manager/tenants');
+      // Delay nav slightly
+      setTimeout(() => navigate('/manager/tenants'), 1000);
     } catch (err) {
       console.error(err);
+      addToast({ type: 'error', title: 'Action Failed', message: err.message });
     } finally {
       setIsProcessing(false);
     }
@@ -98,7 +105,7 @@ export default function TenantRequestDetails() {
 
   const handleDecline = async () => {
       // Logic for decline would go here
-      alert("Application Declined");
+      addToast({ type: 'info', title: 'Declined', message: 'Application was declined.' });
       navigate('/manager/tenants');
   };
 
@@ -170,9 +177,36 @@ export default function TenantRequestDetails() {
                     <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
                         <Shield className="w-5 h-5 text-slate-400" /> Identity Verification
                     </h3>
-                    <div className="bg-slate-50 rounded-2xl p-2 border-2 border-dashed border-slate-200">
-                        {request.proofOfIdentity ? (
-                             <img src={request.proofOfIdentity} alt="ID Proof" className="w-full h-64 object-contain rounded-xl" />
+                    <div className="bg-slate-50 rounded-2xl p-2 border-2 border-dashed border-slate-200 overflow-hidden">
+                        {(request.idDocumentUrl || request.proofOfIdentity) ? (
+                             (() => {
+                                 const url = request.idDocumentUrl || request.proofOfIdentity;
+                                 const isPdf = url.toLowerCase().includes('.pdf');
+                                 
+                                 return (
+                                    <div className="relative group">
+                                        {isPdf ? (
+                                            <div className="h-64 flex flex-col items-center justify-center text-slate-400 gap-3 bg-slate-100/50 rounded-xl">
+                                                <FileText className="w-16 h-16" />
+                                                <span className="font-medium">PDF Document</span>
+                                            </div>
+                                        ) : (
+                                            <img src={url} alt="ID Proof" className="w-full h-64 object-contain rounded-xl bg-white" />
+                                        )}
+                                        
+                                        <a 
+                                            href={url} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="absolute inset-0 bg-slate-900/0 hover:bg-slate-900/60 transition-all flex items-center justify-center opacity-0 hover:opacity-100 rounded-xl"
+                                        >
+                                            <span className="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold text-sm shadow-xl flex items-center gap-2 transform translate-y-2 group-hover:translate-y-0 transition-transform">
+                                                {isPdf ? 'Open PDF' : 'View Full Image'}
+                                            </span>
+                                        </a>
+                                    </div>
+                                 );
+                             })()
                         ) : (
                              <div className="h-40 flex items-center justify-center text-slate-400 font-medium">No ID Document Uploaded</div>
                         )}
@@ -232,6 +266,7 @@ export default function TenantRequestDetails() {
 
             </div>
         </div>
+        <ToastContainer toasts={toasts} remove={removeToast} />
     </div>
   );
 }

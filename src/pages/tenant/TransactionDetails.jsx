@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MockService } from '../../services/mockService';
+import { db } from '../../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { FaChevronRight, FaCheckCircle, FaClock, FaFileAlt, FaDownload, FaArrowLeft } from 'react-icons/fa';
 
 const TransactionDetails = () => {
@@ -9,13 +10,20 @@ const TransactionDetails = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate fetching data
-    setTimeout(() => {
-      const data = MockService.getAll();
-      const foundPayment = (data.payments || []).find(p => p.id === id);
-      setTransaction(foundPayment);
-      setLoading(false);
-    }, 500);
+    const fetchTransaction = async () => {
+      try {
+        const docRef = doc(db, "payments", id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+           setTransaction({ id: docSnap.id, ...docSnap.data() });
+        }
+      } catch (err) {
+        console.error("Error fetching transaction:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTransaction();
   }, [id]);
 
   const formatCurrency = (amount) => {

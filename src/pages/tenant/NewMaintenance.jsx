@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { MockService } from '../../services/mockService';
+import { db } from '../../lib/firebase';
+import { uploadFiles } from '../../lib/storage';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore'; 
 import { useAuth } from '../../context/AuthContext';
 import { FaChevronRight, FaCamera, FaTimes, FaHome, FaBolt, FaTint, FaHammer, FaBroom, FaLayerGroup } from 'react-icons/fa';
 import { cn } from '../../lib/utils';
@@ -37,22 +39,28 @@ const NewMaintenance = () => {
 
   const handleImageUpload = (e) => {
     if (e.target.files && e.target.files.length > 0) {
-      // Mock: just storing the name
-      const newImages = Array.from(e.target.files).map(f => f.name);
-      setFormData(prev => ({ ...prev, images: [...prev.images, ...newImages] }));
+      // Store actual File objects
+      const newFiles = Array.from(e.target.files);
+      setFormData(prev => ({ ...prev, images: [...prev.images, ...newFiles] }));
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.title || !formData.category || !formData.description) return;
 
     setLoading(true);
     
-    setTimeout(() => {
-      const data = MockService.getAll();
+    try {
+      // Upload images if any
+      let imageUrls = [];
+      if (formData.images && formData.images.length > 0) {
+          // Filter out any strings if they were pre-filled (legacy support)
+          const filesToUpload = formData.images.filter(img => img instanceof File);
+          imageUrls = await uploadFiles(filesToUpload, 'maintenance');
+      }
+
       const newTicket = {
-        id: `m${Date.now()}`,
         title: formData.title,
         category: formData.category,
         description: formData.description,
@@ -60,17 +68,20 @@ const NewMaintenance = () => {
         status: 'pending',
         date: new Date().toISOString().split('T')[0],
         updates: [],
-        tenantId: user.id,
-        images: formData.images
+        tenantId: user.uid || user.id,
+        estateId: user.estateId,
+        images: imageUrls, 
+        createdAt: serverTimestamp()
       };
 
-      if (!data.maintenance) data.maintenance = [];
-      data.maintenance.push(newTicket);
-      MockService.update(data);
+      await addDoc(collection(db, "maintenance"), newTicket);
       
       setLoading(false);
       navigate('/tenant/maintenance');
-    }, 1500);
+    } catch (err) {
+       console.error("Error creating ticket:", err);
+       setLoading(false);
+    }
   };
 
   return (

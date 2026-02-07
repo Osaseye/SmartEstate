@@ -1,30 +1,43 @@
 import React, { useState, useEffect } from 'react';
-import { MockService } from '../../services/mockService';
+import { db } from '../../lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore'; 
+import { useAuth } from '../../context/AuthContext';
 import { cn } from '../../lib/utils';
 import { 
   LucideMegaphone, 
   LucideCalendar, 
   LucideAlertTriangle, 
-  LucideInfo, // Changed from LucideNewspaper to LucideInfo as Newspaper isn't exported in lucide-react sometimes, or just safe fallback
+  LucideInfo, 
   LucidePhone,
   LucideFileText,
   LucideSearch
 } from 'lucide-react';
-import { FaFire, FaBriefcaseMedical, FaShieldAlt } from 'react-icons/fa'; // Using FontAwesome for emergency icons for variety
+import { FaFire, FaBriefcaseMedical, FaShieldAlt } from 'react-icons/fa';
 
 const Community = () => {
+  const { user } = useAuth();
   const [announcements, setAnnouncements] = useState([]);
   const [filter, setFilter] = useState('all'); // all, news, event, urgent
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate fetch
-    setTimeout(() => {
-       const data = MockService.getAll();
-       setAnnouncements(data.announcements || []);
-       setLoading(false);
-    }, 800);
-  }, []);
+    const fetchData = async () => {
+        if (user && user.estateId) {
+            try {
+                // In future: query(collection(db, "announcements"), where("estateId", "==", user.estateId))
+                // For now, empty or fetch all simple
+                const q = query(collection(db, "announcements"), where("estateId", "==", user.estateId));
+                const snapshot = await getDocs(q);
+                setAnnouncements(snapshot.docs.map(d => ({id: d.id, ...d.data()})));
+            } catch (err) {
+                console.error("Error fetching announcements:", err);
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+    fetchData();
+  }, [user]);
 
   const filteredItems = filter === 'all' 
     ? announcements 

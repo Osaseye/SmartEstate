@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { MockService } from '../../services/mockService';
+import { db } from '../../lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore'; 
 import { useAuth } from '../../context/AuthContext';
 import { FaMoneyBillWave, FaHistory, FaCheckCircle, FaClock } from 'react-icons/fa';
 
@@ -11,15 +12,29 @@ const Payments = () => {
   const [invoices, setInvoices] = useState([]);
 
   useEffect(() => {
-    const data = MockService.getAll();
-    if (user) {
-      // Filter for current user
-      const userPayments = (data.payments || []).filter(p => p.tenantId === user.id);
-      const userInvoices = (data.invoices || []).filter(i => i.tenantId === user.id && i.status === 'pending');
-      
-      setPayments(userPayments.sort((a, b) => new Date(b.date) - new Date(a.date)));
-      setInvoices(userInvoices);
-    }
+    const fetchData = async () => {
+      if (user) {
+        try {
+          const idToQuery = user.uid || user.id;
+
+          // Fetch Payments
+          const payQuery = query(collection(db, "payments"), where("tenantId", "==", idToQuery));
+          const paySnap = await getDocs(payQuery);
+          const userPayments = paySnap.docs.map(d => ({id: d.id, ...d.data()}));
+          setPayments(userPayments.sort((a, b) => b.createdAt - a.createdAt));
+
+          // Fetch Invoices (pending)
+          const invQuery = query(collection(db, "invoices"), where("tenantId", "==", idToQuery), where("status", "==", "pending"));
+          const invSnap = await getDocs(invQuery);
+          const userInvoices = invSnap.docs.map(d => ({id: d.id, ...d.data()}));
+          setInvoices(userInvoices);
+
+        } catch (err) {
+            console.error("Error fetching payment data:", err);
+        }
+      }
+    };
+    fetchData();
   }, [user]);
 
   const totalOutstanding = invoices.reduce((acc, curr) => acc + curr.amount, 0);

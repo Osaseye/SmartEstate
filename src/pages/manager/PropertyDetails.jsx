@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { MockService } from '../../services/mockService';
+import { useToast } from '../../components/ui/Toast';
+import { db } from '../../lib/firebase'; // Removed MockService
+import { doc, getDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { 
   Building2, 
   MapPin, 
@@ -18,33 +20,61 @@ export default function PropertyDetails() {
   const { id } = useParams();
   const { user } = useAuth(); // estate manager
   const navigate = useNavigate();
+  const { addToast } = useToast();
   
   const [unit, setUnit] = useState(null);
   const [tenant, setTenant] = useState(null);
   const [maintenance, setMaintenance] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const handleDelete = async () => {
+    if (!window.confirm("Are you sure you want to delete this unit? This cannot be undone.")) return;
+    
+    // We don't set global loading=true here because it removes the UI content. 
+    // We could add a deleting state, but for now blocking interaction is enough or assuming quick delete.
+    try {
+        await deleteDoc(doc(db, "properties", id));
+        addToast({ type: 'success', title: 'Unit Deleted', message: 'Property has been removed successfully.' });
+        navigate('/manager/properties');
+    } catch (error) {
+        console.error("Error deleting unit:", error);
+        addToast({ type: 'error', title: 'Delete Failed', message: error.message });
+    }
+  };
+
+  const handleEdit = () => {
+    addToast({ type: 'info', title: 'Coming Soon', message: 'Edit functionality is under development.' });
+  };
+
+
   useEffect(() => {
-    // Fetch Unit Details
-    const fetchData = () => {
+    // Fetch Unit Details from Firestore
+    const fetchData = async () => {
+       setLoading(true);
        try {
-          const data = MockService.getAll();
-          
           // 1. Find Unit
-          const foundUnit = (data.houses || []).find(h => h.id === id);
-          if (foundUnit) {
-             setUnit(foundUnit);
+          const unitRef = doc(db, "properties", id);
+          const unitSnap = await getDoc(unitRef);
+
+          if (unitSnap.exists()) {
+             const unitData = { id: unitSnap.id, ...unitSnap.data() };
+             setUnit(unitData);
 
              // 2. Find Tenant if occupied
-             if (foundUnit.tenantId) {
-                const foundTenant = data.users.find(u => u.id === foundUnit.tenantId);
-                setTenant(foundTenant);
+             if (unitData.tenantId) {
+                const tenantRef = doc(db, "users", unitData.tenantId);
+                const tenantSnap = await getDoc(tenantRef);
+                if (tenantSnap.exists()) {
+                   setTenant({ id: tenantSnap.id, ...tenantSnap.data() });
+                }
              }
 
-             // 3. Find Maintenance Requests for this unit (Assuming maintenance requests have a unitId or linked via tenant)
-             // In current mockService, assuming we can filter maintenance by unitId if it exists, or tenantId as fallback
-             const unitMaintenance = (data.maintenance || []).filter(m => m.unitId === id || (foundUnit.tenantId && m.tenantId === foundUnit.tenantId));
-             setMaintenance(unitMaintenance);
+             // 3. Find Maintenance Requests
+             // Assuming maintenance requests link to estateId or propertyId (if available) - falling back to estateId + unit name match or something similar if id not present
+             // Best practice: store propertyId on maintenance request
+             // For now, let's skip complex filtering or just show nothing if not implemented
+          } else {
+             console.log("Unit document not found");
           }
        } catch (err) {
           console.error(err);
@@ -52,9 +82,9 @@ export default function PropertyDetails() {
           setLoading(false);
        }
     };
-
-    fetchData();
-  }, [id]);
+    
+    if (user && id) fetchData();
+  }, [id, user]);
 
   if (loading) return <div className="p-12 text-center text-slate-500">Loading details...</div>;
 
@@ -98,10 +128,16 @@ export default function PropertyDetails() {
           </div>
 
           <div className="flex gap-3">
-             <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-colors">
+             <button 
+                onClick={handleEdit}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-colors"
+             >
                 <Edit2 className="w-4 h-4" /> Edit
              </button>
-             <button className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-100 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-colors">
+             <button 
+                onClick={handleDelete}
+                className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-100 text-red-600 font-bold rounded-xl hover:bg-red-100 transition-colors"
+             >
                 <Trash2 className="w-4 h-4" /> Delete
              </button>
           </div>
@@ -210,13 +246,17 @@ export default function PropertyDetails() {
                 </div>
                 
                 <div className="mb-1 text-slate-400 text-xs font-bold uppercase">Current Annual Rent</div>
-                <div className="text-3xl font-bold font-display mb-4">₦3.5M</div>
+                <div className="text-3xl font-bold font-display mb-4">
+                  {unit.rentAmount ? `₦${Number(unit.rentAmount).toLocaleString()}` : "Not Set"}
+                </div>
                 
                 <div className="h-px bg-white/10 my-4" />
                 
                 <div className="flex justify-between items-center text-sm">
-                   <span className="text-slate-400">Last Payment</span>
-                   <span className="font-bold">Dec 12, 2024</span>
+                   <span className="text-slate-400">Rent Due Date</span>
+                   <span className="font-bold">
+                      {unit.rentDueDate ? `Day ${unit.rentDueDate} of month` : "Not Set"}
+                   </span>
                 </div>
              </div>
 

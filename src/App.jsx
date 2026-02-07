@@ -27,12 +27,13 @@ import MaintenanceDetails from './pages/tenant/MaintenanceDetails';
 import Settings from './pages/tenant/Settings';
 import Community from './pages/tenant/Community';
 import DashboardLayout from './components/layout/DashboardLayout';
+import PendingApproval from './pages/tenant/PendingApproval';
 
 // ----------------------------------------------------------------------
 // Protected Route Wrappers (Structural Placeholders)
 // ----------------------------------------------------------------------
 
-const ProtectedRoute = ({ children, allowedRole }) => {
+const ProtectedRoute = ({ children, allowedRole, requireVerification = false }) => {
   const { user, loading } = useAuth();
   
   if (loading) return <div>Loading...</div>; // Simple loading state
@@ -42,6 +43,13 @@ const ProtectedRoute = ({ children, allowedRole }) => {
   if (allowedRole && user.role !== allowedRole) {
     // Redirect to their correct dashboard if they are the wrong role
     return <Navigate to={user.role === 'manager' ? '/manager' : '/tenant'} replace />;
+  }
+
+  // Tenant Verification Check
+  if (allowedRole === 'tenant' && requireVerification) {
+     if (user.verificationStatus === 'pending') {
+         return <Navigate to="/tenant/pending" replace />;
+     }
   }
 
   return children;
@@ -63,11 +71,24 @@ function App() {
       <Route path="/register" element={<RoleSelection />} />
       <Route path="/register/manager" element={<RegisterManager />} />
       <Route path="/register/tenant" element={<RegisterTenant />} />
+      
+      {/* Blocked / Status Routes */}
+      <Route path="/tenant/pending" element={
+        <ProtectedRoute allowedRole="tenant">
+           <PendingApproval />
+        </ProtectedRoute>
+      } />
 
       {/* Manager Routes */}
       <Route path="/manager/onboarding" element={
         <ProtectedRoute allowedRole="manager">
            <ManagerOnboarding />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/tenant/onboarding" element={
+        <ProtectedRoute allowedRole="tenant">
+           <TenantOnboarding />
         </ProtectedRoute>
       } />
       
@@ -91,7 +112,7 @@ function App() {
       </Route>
 
       {/* Tenant Routes */}
-      <Route path="/tenant/onboarding" element={
+      <Route path="/tenant/onboarding" eleme requireVerification={true}nt={
         <ProtectedRoute allowedRole="tenant">
            <TenantOnboarding />
         </ProtectedRoute>

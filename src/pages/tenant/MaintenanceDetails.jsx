@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { MockService } from '../../services/mockService';
+import { db } from '../../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 import { FaChevronRight, FaCalendar, FaMapMarkerAlt, FaToolbox, FaCheckCircle, FaClock, FaExclamationCircle } from 'react-icons/fa';
 import { cn } from '../../lib/utils';
-import { Wrench, User, Briefcase, CheckCircle2, CircleDashed } from 'lucide-react'; // Using Lucide for timeline
+import { Wrench, User, Briefcase, CheckCircle2, CircleDashed } from 'lucide-react';
 
 const STATUS_CONFIG = {
   pending: { label: 'Request Received', color: 'bg-yellow-500', icon: FaClock },
@@ -17,13 +18,22 @@ const MaintenanceDetails = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate API fetch delay
-    setTimeout(() => {
-      const allData = MockService.getAll();
-      const found = allData.maintenance.find(t => t.id === id);
-      setTicket(found);
-      setLoading(false);
-    }, 500);
+    const fetchTicket = async () => {
+       try {
+         const docRef = doc(db, "maintenance", id);
+         const docSnap = await getDoc(docRef);
+         if (docSnap.exists()) {
+            setTicket({ id: docSnap.id, ...docSnap.data() });
+         } else {
+            console.log("No such document!");
+         }
+       } catch (err) {
+         console.error("Error fetching ticket:", err);
+       } finally {
+         setLoading(false);
+       }
+    };
+    fetchTicket();
   }, [id]);
 
   if (loading) {

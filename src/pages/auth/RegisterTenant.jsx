@@ -30,9 +30,9 @@ export default function RegisterTenant() {
     setLoading(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // await new Promise(resolve => setTimeout(resolve, 800));
       
-      const result = register({
+      const result = await register({
         name: formData.name,
         email: formData.email,
         password: formData.password,

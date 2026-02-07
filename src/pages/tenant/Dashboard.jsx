@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { MockService } from '../../services/mockService';
+import { db } from '../../lib/firebase';
+import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
 import { 
   Building2, 
@@ -100,32 +101,65 @@ const TenantDashboard = () => {
   });
 
   // Mock activity feed
-  const [activities, setActivities] = useState([]); // Empty state as requested from mock data
+  const [activities, setActivities] = useState([]); 
 
   useEffect(() => {
-    if (user && user.estateId) {
-      const allData = MockService.getAll();
-      const foundEstate = allData.estates.find(e => e.id === user.estateId);
-      setEstate(foundEstate);
-      
-      // Load visitors
-      setVisitors(allData.visitors || []);
-    }
+    const fetchData = async () => {
+      if (user && user.estateId) {
+         try {
+           // 1. Fetch Estate
+           const estateDoc = await getDoc(doc(db, "estates", user.estateId));
+           if (estateDoc.exists()) {
+              setEstate({id: estateDoc.id, ...estateDoc.data()});
+           }
+
+           // 2. Fetch Visitors
+           const q = query(collection(db, "visitors"), where("tenantId", "==", user.uid || user.id));
+           const snapshot = await getDocs(q);
+           const myVisitors = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+           // Simple filter for active/expired could be done here or in query
+           // Sorting by creation time descending is ideal, but for now client-side sort
+           myVisitors.sort((a,b) => b.createdAt - a.createdAt);
+           setVisitors(myVisitors);
+
+         } catch (err) {
+            console.error(err);
+         }
+      }
+    };
+    fetchData();
   }, [user]);
 
-  const generateVisitorCode = () => {
-     // Mock generation
-     const code = Math.floor(1000 + Math.random() * 9000).toString();
-     const newVisitor = {
-         id: `v${Date.now()}`,
-         name: 'New Guest',
-         code: code,
-         status: 'active',
-         expiresAt: Date.now() + 24 * 60 * 60 * 1000,
-         type: 'Guest'
-     };
-     setVisitors(prev => [newVisitor, ...prev]);
-     // In real app, would call service
+  const generateVisitorCode = async () => {
+     try {
+       const code = Math.floor(1000 + Math.random() * 9000).toString();
+       const expiresIn = 24 * 60 * 60 * 1000; // 24 hours
+       const expiresAt = Date.now() + expiresIn;
+       
+       const newVisitor = {
+           name: 'New Guest', // In a real modal we'd ask for name
+           code: code,
+           status: 'active',
+           expiresAt: expiresAt,
+           createdAt: Date.now(),
+           type: 'Guest',
+           tenantId: user.uid || user.id,
+           estateId: user.estateId
+       };
+       
+       // Optimistic Update
+       setVisitors(prev => [{...newVisitor, id: 'temp_' + Date.now()}, ...prev]);
+       
+       // Firestore Write
+       const docRef = await addDoc(collection(db, "visitors"), {
+           ...newVisitor,
+           createdAt: serverTimestamp() // Use server timestamp for DB
+       });
+       
+       // Update temp ID with real ID (optional if we fetched again, but let's keep it simple)
+     } catch (err) {
+         console.error("Error generating code", err);
+     }
   };
 
   // If user is pending, show ONLY the pending screen or a very limited view?

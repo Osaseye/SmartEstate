@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { MockService } from '../../services/mockService';
+import { db } from '../../lib/firebase';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { 
   Building2, 
   MapPin, 
@@ -30,18 +31,26 @@ export default function Properties() {
     fetchData();
   }, [user]);
 
-  const fetchData = () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const data = MockService.getAll();
-      const myEstate = data.estates.find(e => e.managerId === user.id);
-      
-      if (myEstate) {
-        setEstate(myEstate);
-        // Filter houses for this estate. Note: MockService might need better filtering if houses array grows
-        const estateUnits = (data.houses || []).filter(h => h.estateId === myEstate.id);
-        setUnits(estateUnits);
+      if (!user.estateId) {
+         setLoading(false);
+         return; 
       }
+      
+      // 1. Fetch Estate Settings 
+      const estateDoc = await getDoc(doc(db, "estates", user.estateId));
+      if (estateDoc.exists()) {
+         setEstate({id: estateDoc.id, ...estateDoc.data()});
+      }
+
+      // 2. Fetch Properties
+      const q = query(collection(db, "properties"), where("estateId", "==", user.estateId));
+      const snapshot = await getDocs(q);
+      const estateUnits = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+      setUnits(estateUnits);
+
     } catch (err) {
       console.error(err);
     } finally {

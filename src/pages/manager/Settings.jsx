@@ -1,69 +1,102 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { MockService } from '../../services/mockService';
+import { db } from '../../lib/firebase';
+import { uploadFile } from '../../lib/storage';
+import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
 import { 
   Save,
   Building,
   User,
   Lock,
-  LogOut
+  LogOut,
+  Upload
 } from 'lucide-react';
+import { useToast, ToastContainer } from '../../components/ui/Toast';
 
 export default function ManagerSettings() {
-  const { user, login } = useAuth(); // Assuming login or a setAuth exists, we might need a way to update context
+  const { user, logout } = useAuth(); 
+  const { toasts, addToast, removeToast } = useToast();
   
-  const [activeTab, setActiveTab] = useState('profile'); // profile | estate | security
+  const [activeTab, setActiveTab] = useState('profile'); 
   const [profileData, setProfileData] = useState({ name: '', email: '' });
-  const [estateData, setEstateData] = useState({ name: '', address: '', code: '' });
+  const [estateData, setEstateData] = useState({ name: '', address: '', code: '', image: '' });
+  const [estateId, setEstateId] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [newImageFile, setNewImageFile] = useState(null); 
 
   useEffect(() => {
     if (user) {
-      setProfileData({ name: user.name, email: user.email });
+      setProfileData({ name: user.name || '', email: user.email || '' });
       
-      const data = MockService.getAll();
-      const myEstate = data.estates.find(e => e.managerId === user.id);
-      if (myEstate) {
-         setEstateData({ 
-            name: myEstate.name, 
-            address: myEstate.address, 
-            code: myEstate.code 
-         });
-      }
+      const fetchEstateKey = async () => {
+         const q = query(collection(db, "estates"), where("managerId", "==", user.uid || user.id));
+         const snapshot = await getDocs(q);
+         if (!snapshot.empty) {
+            const data = snapshot.docs[0].data();
+            setEstateId(snapshot.docs[0].id);
+            setEstateData({
+               name: data.name || '',
+               address: data.address || '',
+               code: data.code || '',
+               image: data.image || ''
+            });
+         }
+      };
+      
+      fetchEstateKey();
     }
   }, [user]);
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
      e.preventDefault();
      setIsSaving(true);
      
-     // Simulate API delay
-     setTimeout(() => {
-        const data = MockService.getAll();
-        
-        // Update User
-        const userIndex = data.users.findIndex(u => u.id === user.id);
-        if (userIndex > -1) {
-           data.users[userIndex] = { ...data.users[userIndex], ...profileData };
-           data.auth = data.users[userIndex]; // Update session
-        }
+     try {
+       // Update User Profile
+       if (user.uid) {
+         const userRef = doc(db, "users", user.uid);
+         await updateDoc(userRef, {
+            name: profileData.name
+         });
+       }
 
-        // Update Estate
-        if (activeTab === 'estate') {
-           const estateIndex = data.estates.findIndex(e => e.managerId === user.id);
-           if (estateIndex > -1) {
-              data.estates[estateIndex] = { ...data.estates[estateIndex], ...estateData };
-           }
-        }
+       // Update Estate
+       if (activeTab === 'estate' && estateId) {
+          let imageUrl = estateData.image;
+          
+          if (newImageFile) {
+              imageUrl = await uploadFile(newImageFile, 'estates');
+          }
 
-        MockService.update(data);
-        setIsSaving(false);
-        // Force refresh or simple alert
-        alert('Settings saved!');
-     }, 1000);
+          const estateRef = doc(db, "estates", estateId);
+          await updateDoc(estateRef, {
+             name: estateData.name,
+             address: estateData.address,
+             image: imageUrl
+          });
+
+          setNewImageFile(null); // Clear pending file
+       }
+
+       addToast({
+         type: 'success',
+         title: 'Changes Saved',
+         message: 'Your settings have been updated successfully.'
+       });
+     } catch (error) {
+       console.error("Error saving settings:", error);
+       addToast({
+         type: 'error',
+         title: 'Save Failed',
+         message: 'Could not save changes. Please try again.'
+       });
+     } finally {
+       setIsSaving(false);
+     }
   };
 
   return (
+    <>
     <div className="space-y-8 animate-in fade-in duration-500 max-w-4xl">
        <div className="border-b border-slate-200 pb-6">
           <h1 className="text-2xl font-bold text-slate-900 font-display">Settings</h1>
@@ -121,12 +154,9 @@ export default function ManagerSettings() {
                       </div>
                       <div className="pt-4 flex justify-between items-center">
                           <button 
-                             // Mobile Logout
                              type="button"
                              onClick={() => {
-                                 // Assuming logout logic is available via context, but we need to pass it or useAuth again 
-                                 // (Note: we destructured login above, let's grab logout too - need to edit import line first if used)
-                                 window.location.href = '/login'; 
+                                 if (logout) logout();
                              }}
                              className="md:hidden flex items-center gap-2 text-red-600 font-bold text-sm bg-red-50 px-4 py-2 rounded-lg"
                           >
@@ -142,6 +172,90 @@ export default function ManagerSettings() {
                           </button>
                       </div>
                    </form>
+                )}
+                
+                {activeTab === 'estate' && (
+                   <form onSubmit={handleSave} className="space-y-6">
+                      
+                      {/* Image Upload Section */}
+                      <div>
+                         <label className="block text-sm font-bold text-slate-700 mb-2">Estate Banner Image</label>
+                         <div className="flex items-start gap-6">
+                            <div className="w-32 h-20 bg-slate-100 rounded-lg overflow-hidden border border-slate-200">
+                               {(newImageFile || estateData.image) ? (
+                                   <img 
+                                     src={newImageFile ? URL.createObjectURL(newImageFile) : estateData.image} 
+                                     alt="Estate Banner" 
+                                     className="w-full h-full object-cover"
+                                   />
+                               ) : (
+                                   <div className="w-full h-full flex items-center justify-center text-slate-400">
+                                      <Building className="w-8 h-8" />
+                                   </div>
+                               )}
+                            </div>
+                            <div className="flex-1">
+                                <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase rounded-lg transition-colors mb-2">
+                                    <Upload className="w-4 h-4" /> Upload New Image
+                                    <input 
+                                       type="file" 
+                                       accept="image/*" 
+                                       className="hidden" 
+                                       onChange={(e) => {
+                                           if(e.target.files[0]) setNewImageFile(e.target.files[0]);
+                                       }}
+                                    />
+                                </label>
+                                <p className="text-xs text-slate-500">Recommended size: 1200x400px. Max 5MB.</p>
+                            </div>
+                         </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-6">
+                         <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-2">Estate Name</label>
+                            <input 
+                               type="text" 
+                               className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10"
+                               value={estateData.name}
+                               onChange={e => setEstateData({...estateData, name: e.target.value})}
+                            />
+                         </div>
+                         <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-2">Estate Address</label>
+                            <input 
+                               type="text" 
+                               className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-slate-900/10"
+                               value={estateData.address}
+                               onChange={e => setEstateData({...estateData, address: e.target.value})}
+                            />
+                         </div>
+                         <div>
+                            <label className="block text-sm font-bold text-slate-700 mb-2">Estate Code (Read Only)</label>
+                            <input 
+                               type="text" 
+                               disabled
+                               className="w-full p-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 cursor-not-allowed font-mono"
+                               value={estateData.code}
+                            />
+                         </div>
+                      </div>
+                      <div className="pt-4 flex justify-end">
+                          <button 
+                            type="submit" 
+                            disabled={isSaving}
+                            className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200"
+                          >
+                             <Save className="w-4 h-4" /> {isSaving ? 'Saving...' : 'Save Changes'}
+                          </button>
+                      </div>
+                   </form>
+                )}
+                
+                {activeTab === 'security' && (
+                    <div className="text-center py-10 text-slate-400">
+                        <p>Password change functionality coming soon.</p>
+                    </div>
                 )}
                    <form onSubmit={handleSave} className="space-y-6">
                       <h3 className="text-lg font-bold text-slate-900 mb-6">Personal Information</h3>
@@ -169,7 +283,7 @@ export default function ManagerSettings() {
                          </button>
                       </div>
                    </form>
-                )}
+               
 
                 {activeTab === 'estate' && (
                    <form onSubmit={handleSave} className="space-y-6">
@@ -223,5 +337,7 @@ export default function ManagerSettings() {
        </div>
 
     </div>
+    <ToastContainer toasts={toasts} remove={removeToast} />
+    </>
   );
 }

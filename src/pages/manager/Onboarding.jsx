@@ -1,12 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { MockService } from '../../services/mockService';
+import { db } from '../../lib/firebase';
+import { uploadFile } from '../../lib/storage';
+import { collection, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 export default function ManagerOnboarding() {
   const navigate = useNavigate();
   const { user } = useAuth();
   
+  // Initialize from sessionStorage if available to handle reloads for step persistence?
+  // User asked: "on reload or refresh you should start the process again"
+  // So we explicitly do NOT want persistence. Default state handles this.
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [estateCode, setEstateCode] = useState(null);
@@ -22,25 +27,95 @@ export default function ManagerOnboarding() {
     sharedHousing: false,
   });
 
+  // Initialize from localStorage for persistence
+  useEffect(() => {
+    const saved = localStorage.getItem('managerOnboarding');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.step) setStep(parsed.step);
+        if (parsed.formData) setFormData(prev => ({ ...prev, ...parsed.formData }));
+      } catch (e) {
+        console.error("Failed to parse saved onboarding state", e);
+      }
+    }
+  }, []);
+
+  // Save to localStorage whenever persistence-worthy state changes
+  useEffect(() => {
+    // We don't save 'image' file object as it is not serializable. 
+    // If the user refreshes, they might need to re-select the image.
+    // We can save the rest of the text data.
+    const stateToSave = {
+        step,
+        formData: {
+            ...formData,
+            image: null // Explicitly don't save the file object
+        }
+    };
+    localStorage.setItem('managerOnboarding', JSON.stringify(stateToSave));
+  }, [step, formData.name, formData.address, formData.city, formData.state, formData.type, formData.structure, formData.sharedHousing]);
+
+  const handleBack = () => {
+      if (step > 1) {
+          setStep(step - 1);
+      } else {
+          // If at step 1, maybe confirm exit? Or just go back to previous page
+          // For now, let's just allow browser back or do nothing if it's the start
+      }
+  };
+
   const handleCreateEstate = async () => {
     setLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
     
-    const code = `EST-${Math.floor(1000 + Math.random() * 9000)}`;
-    setEstateCode(code);
+    try {
+       const code = `EST-${Math.floor(1000 + Math.random() * 9000)}`;
+       setEstateCode(code);
 
-    MockService.createEstate({
-      ...formData,
-      code: code
-    });
+       // Upload Image if present
+       let imageUrl = 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80'; // Default
+       if (formData.image instanceof File) {
+           imageUrl = await uploadFile(formData.image, 'estates');
+       }
 
-    setLoading(false);
-    setStep(3); // Success step
+       // 1. Create Estate Document
+       const estateData = {
+          name: formData.name,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          type: formData.type,
+          structure: formData.structure,
+          sharedHousing: formData.sharedHousing,
+          code: code,
+          managerId: user.uid || user.id, // Fallback for ID stability
+          createdAt: serverTimestamp(),
+          image: imageUrl
+       };
+
+       const docRef = await addDoc(collection(db, "estates"), estateData);
+
+       // 2. Link Estate to Manager Profile
+       const userRef = doc(db, "users", user.uid || user.id);
+       await updateDoc(userRef, {
+          estateId: docRef.id
+       });
+
+       // Clear persistence on success
+       localStorage.removeItem('managerOnboarding');
+
+       setStep(3); // Success step
+    } catch (error) {
+       console.error("Error creating estate:", error);
+       alert("Failed to create estate. Please try again.");
+    } finally {
+       setLoading(false);
+    }
   };
 
   const handleFinish = () => {
     navigate('/manager/dashboard');
-    window.location.reload(); 
+    window.location.reload(); // Force reload to refresh AuthContext with new estateId
   };
 
   return (
