@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { db } from '../../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { FaChevronRight, FaCheckCircle, FaClock, FaFileAlt, FaDownload, FaArrowLeft } from 'react-icons/fa';
+import { FaChevronRight, FaCheckCircle, FaClock, FaTimesCircle, FaFileAlt, FaDownload, FaArrowLeft } from 'react-icons/fa';
 
 const TransactionDetails = () => {
   const { id } = useParams();
@@ -67,10 +67,14 @@ const TransactionDetails = () => {
                     <div className={`px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 ${
                         transaction.status === 'approved' 
                         ? 'bg-green-50 text-green-700' 
+                        : transaction.status === 'rejected'
+                        ? 'bg-red-50 text-red-700'
                         : 'bg-amber-50 text-amber-700'
                     }`}>
                         {transaction.status === 'approved' ? (
                             <><FaCheckCircle /> Approved</>
+                        ) : transaction.status === 'rejected' ? (
+                            <><FaTimesCircle /> Rejected</>
                         ) : (
                             <><FaClock /> Pending Review</>
                         )}

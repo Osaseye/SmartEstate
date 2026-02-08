@@ -40,8 +40,12 @@ export default function AIChatbot() {
 
     // AI Logic
     try {
-        const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
-        const responseText = await generateAIResponse(userMsg.text, apiKey);
+        const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
+        const context = {
+            name: user?.name,
+            role: user?.role
+        };
+        const responseText = await generateAIResponse(userMsg.text, apiKey, context);
         
         setMessages(prev => [...prev, { 
             id: Date.now() + 1, 

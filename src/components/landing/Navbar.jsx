@@ -6,7 +6,7 @@ export default function Navbar() {
 
   useEffect(() => {
     const handleScroll = () => {
-      const sections = ['features', 'payments', 'verification', 'contact'];
+      const sections = ['features', 'community', 'workflow', 'contact'];
       const scrollPosition = window.scrollY + 100;
 
       for (const section of sections) {
@@ -63,10 +63,10 @@ export default function Navbar() {
             </span>
           </div>
           <div className="hidden md:flex items-center space-x-8">
-            <NavItem section="features" label="Estate Management" />
-            <NavItem section="payments" label="Payments" />
-            <NavItem section="verification" label="Verification" />
-            <NavItem section="contact" label="Contact Sales" />
+            <NavItem section="features" label="Features" />
+            <NavItem section="community" label="Community" />
+            <NavItem section="workflow" label="How it Works" />
+            <NavItem section="contact" label="Contact" />
           </div>
           <div className="flex items-center gap-4">
             <Link to="/login" className="text-gray-600 hover:text-primary hidden sm:block">Log in</Link>

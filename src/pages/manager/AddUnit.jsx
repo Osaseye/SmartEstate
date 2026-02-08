@@ -1,17 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useToast, ToastContainer } from '../../components/ui/Toast';
+import { useToast } from '../../components/ui/Toast';
 import { db } from '../../lib/firebase';
 import { doc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { ChevronRight, Home, Building2, Banknote, Calendar } from 'lucide-react';
+import { ChevronRight, Home, Building2, Banknote, Calendar, Upload } from 'lucide-react';
+import { uploadFile } from '../../lib/storage';
 
 export default function AddUnit() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { addToast } = useToast();
+  const { addToast, toasts, removeToast, ToastContainer } = useToast();
   const [estate, setEstate] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
   
   const [newUnit, setNewUnit] = useState({
     block: '',
@@ -56,17 +58,23 @@ export default function AddUnit() {
     // Fallback if empty (should be validated in UI)
     if (!unitName.trim()) unitName = `Unit ${newUnit.number}`;
 
-    const payload = {
-      ...newUnit,
-      name: unitName,
-      estateId: estate.id,
-      tenantId: null,
-      tenantName: null,
-      status: 'vacant',
-      createdAt: serverTimestamp()
-    };
-
     try {
+        let imageUrl = '';
+        if (imageFile) {
+            imageUrl = await uploadFile(imageFile, `units/${user.estateId}`);
+        }
+
+        const payload = {
+          ...newUnit,
+          name: unitName,
+          estateId: estate.id,
+          tenantId: null,
+          tenantName: null,
+          status: 'vacant',
+          image: imageUrl,
+          createdAt: serverTimestamp()
+        };
+
         await addDoc(collection(db, "properties"), payload);
         addToast({ type: 'success', title: 'Unit Created', message: `${unitName} has been added successfully.` });
         
@@ -204,6 +212,28 @@ export default function AddUnit() {
                             <option key={day} value={day}>{day}{day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th'} of month</option>
                          ))}
                       </select>
+                   </div>
+                </div>
+
+                {/* Image Upload */}
+                <div>
+                   <label className="block text-xs font-bold text-slate-500 uppercase mb-2 flex items-center gap-1">
+                      <Upload className="w-3 h-3" /> Unit Image
+                   </label>
+                   <div className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center hover:bg-slate-50 transition-colors cursor-pointer relative">
+                       <input 
+                          type="file" 
+                          accept="image/*"
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          onChange={(e) => setImageFile(e.target.files[0])}
+                       />
+                       {imageFile ? (
+                           <div className="text-green-600 font-bold">{imageFile.name}</div>
+                       ) : (
+                           <div className="text-slate-400 text-sm">
+                               <span className="font-bold text-slate-600">Click to upload</span> or drag and drop<br/>PNG, JPG up to 5MB
+                           </div>
+                       )}
                    </div>
                 </div>
 

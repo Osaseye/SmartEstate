@@ -87,7 +87,7 @@ Follow these steps to set up the project locally.
     VITE_FIREBASE_STORAGE_BUCKET=your_bucket.appspot.com
     VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
     VITE_FIREBASE_APP_ID=your_app_id
-    VITE_OpenAI_API_KEY=your_openai_key_optional
+    VITE_OPENROUTER_API_KEY=your_openrouter_key
     ```
 
 4.  **Run the development server**

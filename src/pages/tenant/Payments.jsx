@@ -131,6 +131,10 @@ const Payments = () => {
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700">
                           <FaCheckCircle className="text-xs" /> Approved
                         </span>
+                      ) : payment.status === 'rejected' ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700">
+                          <FaCheckCircle className="text-xs" /> Rejected
+                        </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700">
                           <FaClock className="text-xs" /> Pending

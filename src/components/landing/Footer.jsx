@@ -18,7 +18,7 @@ export default function Footer() {
         </div>
       </section>
 
-      <footer className="bg-white border-t border-gray-100 pt-16 pb-8">
+      <footer id="contact" className="bg-white border-t border-gray-100 pt-16 pb-8 scroll-mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 mb-12">
             <div className="col-span-2 lg:col-span-2">

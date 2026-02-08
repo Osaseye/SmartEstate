@@ -22,6 +22,7 @@ export default function ManagerMaintenance() {
   const { addToast, toasts, removeToast } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [requests, setRequests] = useState([]);
   const [filter, setFilter] = useState('all'); // all | pending | in-progress | resolved
 
   useEffect(() => {

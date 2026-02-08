@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { db } from '../../lib/firebase';
-import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp, deleteDoc } from 'firebase/firestore';
 import { Link } from 'react-router-dom';
 import { 
   Building2, 
@@ -17,7 +17,8 @@ import {
   Wallet,
   Home,
   Users,
-  UserPlus
+  UserPlus,
+  Trash2
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { motion } from 'framer-motion';
@@ -163,6 +164,17 @@ const TenantDashboard = () => {
     };
     fetchData();
   }, [user]);
+
+  const handleDeleteVisitor = async (visitorId) => {
+    if (!window.confirm("Are you sure you want to delete this visitor code?")) return;
+    try {
+      setVisitors(prev => prev.filter(v => v.id !== visitorId));
+      await deleteDoc(doc(db, "visitors", visitorId));
+    } catch (err) {
+      console.error("Error deleting visitor:", err);
+      // Ideally revert state or show toast
+    }
+  };
 
   const generateVisitorCode = async () => {
      try {
@@ -367,14 +379,23 @@ const TenantDashboard = () => {
 
              <div className="space-y-3 relative z-10">
                {visitors.slice(0, 3).map(visitor => (
-                 <div key={visitor.id} className="bg-white/5 border border-white/5 p-3 rounded-xl flex items-center justify-between backdrop-blur-sm hover:bg-white/10 transition-colors">
+                 <div key={visitor.id} className="bg-white/5 border border-white/5 p-3 rounded-xl flex items-center justify-between backdrop-blur-sm hover:bg-white/10 transition-colors group">
                     <div>
                        <div className="text-white text-sm font-bold">{visitor.name}</div>
-                       <div className="text-slate-400 text-xs mt-0.5">{visitor.type}</div>
+                       <div className="text-slate-400 text-xs mt-0.5 flex items-center gap-2">
+                         {visitor.type}
+                         <button 
+                             onClick={() => handleDeleteVisitor(visitor.id)}
+                             className="text-slate-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                             title="Delete Code"
+                         >
+                             <Trash2 className="w-3 h-3" />
+                         </button>
+                       </div>
                     </div>
                     <div className="text-right">
                        <span className="font-mono text-lg font-bold text-emerald-300 block">{visitor.code}</span>
-                       <span className={cn("text-[10px] uppercase font-bold", visitor.status === 'active' ? "text-emerald-400" : "text-slate-500")}>{visitor.status}</span>
+                       <VisitorTimer expiresAt={visitor.expiresAt} status={visitor.status} />
                     </div>
                  </div>
                ))}

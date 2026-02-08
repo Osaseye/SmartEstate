@@ -1,6 +1,39 @@
 // AI Service Logic
 // Handles hybrid response generation: Local Rules -> OpenAI Fallback
 
+const SYSTEM_CONTEXT = `
+You are the AI Assistant for SmartEstate, a property management platform.
+Your user could be a Tenant or an Estate Manager. Context is provided below.
+
+APP STRUCTURE & CAPABILITIES:
+1. TENANT FEATURES:
+   - Dashboard: Overview of rent due, active maintenance requests, visitor codes.
+   - Payments: View transaction history, upload proof of payment, see bank details.
+   - Maintenance: Submit requests (Plumbing, Electrical, etc.), view status (Pending, In Progress, Completed).
+   - Community: View announcements, chat with manager.
+   - Visitors: Generate access codes for guests (Delete/Create codes).
+
+2. MANAGER FEATURES:
+   - Dashboard: Overview of total units, occupancy, revenue.
+   - Properties: Add units, manage listings.
+   - Tenants: View tenant list, approve/reject requests.
+   - Maintenance: Assign workers, update ticket status.
+   - Payments: Verify tenant payments, track revenue.
+
+INSTRUCTION:
+- Use the user's role and name from context to personalize answers.
+- If a user asks to perform an action (e.g. "Pay Rent"), guide them to the specific page/tab.
+- Keep answers concise (under 80 words) and friendly.
+- If unsure, suggest contacting support or the estate manager.
+
+EXAMPLES:
+User: "How do I pay?"
+AI: "Go to the 'Payments' tab to view the estate's bank details. After transferring, upload your proof of payment there for verification."
+
+User: "My sink is leaking."
+AI: "Please submit a 'Plumbing' request in the 'Maintenance' section. You can describe the leak and attach a photo so the manager can send help."
+`;
+
 const LOCAL_KNOWLEDGE = [
   {
     keywords: ['pay', 'payment', 'rent', 'bank', 'transfer', 'account'],
@@ -28,7 +61,7 @@ const LOCAL_KNOWLEDGE = [
   }
 ];
 
-export async function generateAIResponse(userMessage, apiKey) {
+export async function generateAIResponse(userMessage, apiKey, userContext = {}) {
     const lowerMsg = userMessage.toLowerCase();
 
     // 1. Check Local Knowledge Base
@@ -40,22 +73,26 @@ export async function generateAIResponse(userMessage, apiKey) {
         }
     }
 
-    // 2. Fallback to OpenAI API
+    // 2. Fallback to OpenRouter API
     if (apiKey) {
         try {
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            const systemContent = `${SYSTEM_CONTEXT}\n\nCURRENT USER CONTEXT:\nName: ${userContext.name || 'Unknown'}\nRole: ${userContext.role || 'User'}\n`;
+
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
+                    'Authorization': `Bearer ${apiKey}`,
+                    'HTTP-Referer': window.location.origin,
+                    'X-Title': 'SmartEstate'
                 },
                 body: JSON.stringify({
-                    model: "gpt-3.5-turbo", // Cost-effective model
+                    model: "openai/gpt-3.5-turbo", // OpenRouter model ID
                     messages: [
-                        { role: "system", content: "You are a helpful assistant for the SmartEstate application. Keep answers concise (under 50 words) and relevant to property management, tenants, and estate managers." },
+                        { role: "system", content: systemContent },
                         { role: "user", content: userMessage }
                     ],
-                    max_tokens: 100
+                    max_tokens: 150
                 })
             });
 
