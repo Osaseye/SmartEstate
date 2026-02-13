@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Sparkles, MessageSquare } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
 import { generateAIResponse } from '../../lib/ai';
@@ -40,12 +41,12 @@ export default function AIChatbot() {
 
     // AI Logic
     try {
-        const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY;
         const context = {
             name: user?.name,
             role: user?.role
         };
-        const responseText = await generateAIResponse(userMsg.text, apiKey, context);
+        // No longer need API key as Vertex AI uses Firebase config
+        const responseText = await generateAIResponse(userMsg.text, null, context);
         
         setMessages(prev => [...prev, { 
             id: Date.now() + 1, 
@@ -156,12 +157,36 @@ export default function AIChatbot() {
                             )}
                             
                             <div className={cn(
-                                "p-3.5 rounded-2xl text-sm leading-relaxed shadow-sm",
+                                "p-3.5 rounded-2xl text-sm leading-relaxed shadow-sm overflow-hidden",
                                 msg.role === 'user' 
                                     ? "bg-slate-900 text-white rounded-tr-none" 
                                     : "bg-white text-slate-700 border border-slate-200/50 rounded-tl-none"
                             )}>
-                                {msg.text}
+                                {msg.role === 'user' ? (
+                                    msg.text
+                                ) : (
+                                    <ReactMarkdown
+                                        components={{
+                                            p: ({node, ...props}) => <p className="mb-2 last:mb-0 leading-normal" {...props} />,
+                                            ul: ({node, ...props}) => <ul className="list-disc pl-4 mb-2 space-y-1" {...props} />,
+                                            ol: ({node, ...props}) => <ol className="list-decimal pl-4 mb-2 space-y-1" {...props} />,
+                                            li: ({node, ...props}) => <li className="pl-1" {...props} />,
+                                            h1: ({node, ...props}) => <h1 className="text-base font-bold mb-2 mt-4 first:mt-0 text-slate-900" {...props} />,
+                                            h2: ({node, ...props}) => <h2 className="text-sm font-bold mb-2 mt-3 first:mt-0 text-slate-900" {...props} />,
+                                            h3: ({node, ...props}) => <h3 className="text-sm font-semibold mb-1 mt-2 text-slate-800" {...props} />,
+                                            strong: ({node, ...props}) => <strong className="font-bold text-slate-900" {...props} />,
+                                            a: ({node, ...props}) => <a className="text-primary hover:underline font-medium" target="_blank" rel="noopener noreferrer" {...props} />,
+                                            code: ({node, inline, className, children, ...props}) => 
+                                                inline ? (
+                                                    <code className="bg-slate-100 text-slate-800 px-1 py-0.5 rounded text-xs font-mono border border-slate-200" {...props}>{children}</code>
+                                                ) : (
+                                                    <code className="block bg-slate-100 p-2 rounded-lg text-xs font-mono overflow-x-auto border border-slate-200 my-2" {...props}>{children}</code>
+                                                ),
+                                        }}
+                                    >
+                                        {msg.text}
+                                    </ReactMarkdown>
+                                )}
                             </div>
                         </div>
                     ))}
