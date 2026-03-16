@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, setPersistence, browserSessionPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAI, VertexAIBackend } from "firebase/ai";
@@ -19,6 +19,12 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
+
+// Use Session Storage (browserSessionPersistence) so tabs don't share auth state
+setPersistence(auth, browserSessionPersistence).catch((error) => {
+  console.error("Firebase Auth Persistence Error:", error);
+});
+
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 export const vertexAI = getAI(app, { backend: new VertexAIBackend() });

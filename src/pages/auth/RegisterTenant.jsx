@@ -27,6 +27,11 @@ export default function RegisterTenant() {
       return;
     }
 
+    if (!formData.estateCode.trim()) {
+      setError('Estate code is required');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -115,17 +120,17 @@ export default function RegisterTenant() {
           />
         </div>
         
-        {/* Placeholder for Estate Code */}
+        {/* Estate Code (Mandatory) */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Estate Code (Optional)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Estate Code</label>
           <input 
-            type="text" 
+            type="text"
+            required 
             className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-secondary focus:ring-2 focus:ring-secondary/20 outline-none transition-all bg-gray-50 focus:bg-white"
             placeholder="Enter code provided by manager"
             value={formData.estateCode}
             onChange={(e) => setFormData({...formData, estateCode: e.target.value})}
           />
-          <p className="text-xs text-gray-500 mt-1">If you don't have one, your manager can add you manually later.</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">

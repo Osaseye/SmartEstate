@@ -6,14 +6,16 @@ import { cn } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
 import { generateAIResponse } from '../../lib/ai';
 
-export default function AIChatbot() {
+export default function AIChatbot({ disableContext = false }) {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     { 
         id: 1, 
         role: 'assistant', 
-        text: `Hello ${user?.name ? user.name.split(' ')[0] : 'there'}! I'm your SmartEstate assistant. Ask me anything about your property, payments, or maintenance.` 
+        text: disableContext 
+          ? "Hello! I'm your SmartEstate assistant. How can I help you today?" 
+          : `Hello ${user?.name ? user.name.split(' ')[0] : 'there'}! I'm your SmartEstate assistant. Ask me anything about your property, payments, or maintenance.` 
     }
   ]);
   const [input, setInput] = useState('');
@@ -41,10 +43,16 @@ export default function AIChatbot() {
 
     // AI Logic
     try {
-        const context = {
+        const context = disableContext ? {} : {
             name: user?.name,
-            role: user?.role
+            role: user?.role,
+            email: user?.email,
+            estateId: user?.estateId,
+            unitId: user?.houseId || user?.unitId,
+            status: user?.verificationStatus,
+            phone: user?.phone
         };
+        
         // No longer need API key as Vertex AI uses Firebase config
         const responseText = await generateAIResponse(userMsg.text, null, context);
         
