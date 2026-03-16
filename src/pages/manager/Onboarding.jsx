@@ -29,9 +29,9 @@ export default function ManagerOnboarding() {
     sharedHousing: false,
   });
 
-  // Initialize from localStorage for persistence
+  // Initialize from sessionStorage for persistence
   useEffect(() => {
-    const saved = localStorage.getItem('managerOnboarding');
+    const saved = sessionStorage.getItem('managerOnboarding');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -43,19 +43,19 @@ export default function ManagerOnboarding() {
     }
   }, []);
 
-  // Save to localStorage whenever persistence-worthy state changes
+// Save to sessionStorage whenever persistence-worthy state changes
   useEffect(() => {
     // We don't save 'image' file object as it is not serializable. 
     // If the user refreshes, they might need to re-select the image.
     // We can save the rest of the text data.
     const stateToSave = {
-        step,
-        formData: {
-            ...formData,
-            image: null // Explicitly don't save the file object
-        }
+      step,
+      formData: {
+        ...formData,
+        image: null // Explicitly don't save the file object
+      }
     };
-    localStorage.setItem('managerOnboarding', JSON.stringify(stateToSave));
+    sessionStorage.setItem('managerOnboarding', JSON.stringify(stateToSave));
   }, [step, formData.name, formData.address, formData.city, formData.state, formData.type, formData.structure, formData.sharedHousing]);
 
   const handleBack = () => {
@@ -104,7 +104,7 @@ export default function ManagerOnboarding() {
        });
 
        // Clear persistence on success
-       localStorage.removeItem('managerOnboarding');
+       sessionStorage.removeItem('managerOnboarding');
 
        setStep(3); // Success step
     } catch (error) {

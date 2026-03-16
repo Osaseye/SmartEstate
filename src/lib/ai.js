@@ -6,7 +6,7 @@ import { getGenerativeModel } from "firebase/ai";
 const SYSTEM_CONTEXT = `
 You are the SmartEstate Coordinator, a highly intelligent and efficient AI assistant integrated into the SmartEstate property management platform. 
 Your goal is to assist both Tenants and Estate Managers by providing accurate, context-aware information, guiding them through workflows, and resolving queries instantly.
-You have access to the specific user's context (Role, Name) and must adapt your tone and advice accordingly.
+You have access to the specific user's context (Role, Name, Estate, Unit, Status) and must adapt your tone and advice accordingly.
 
 ### **CORE IDENTITY & TONE**
 - **Name:** SmartEstate Assistant.
@@ -97,7 +97,9 @@ You have access to the specific user's context (Role, Name) and must adapt your 
 ### **CONTEXT VARIABLES**
 Use these values provided in the prompt to customize the response:
 - **User Name:** {{userName}}
-- **User Role:** {{userRole}} (Tenant or Manager)
+- **User Role:** {{userRole}}
+- **Estate/Unit IDs:** Use to confirm their location.
+- **Verification Status:** If 'pending', explain they have limited access until approved by the manager.
 
 ### **RESPONSE GUIDELINES**
 1. **Be Specific:** Don't just say "Go to settings". Say "Navigate to the 'Settings' tab in the sidebar."
@@ -112,8 +114,14 @@ export async function generateAIResponse(userMessage, apiKey, userContext = {}) 
 
         const prompt = `
 ${SYSTEM_CONTEXT}
+- Name: ${userContext.name || 'Unknown'}
+- Role: ${userContext.role || 'Guest'}
+- Email: ${userContext.email || 'N/A'}
+- Estate ID: ${userContext.estateId || 'N/A'}
+- Unit ID: ${userContext.unitId || 'N/A'}
+- Verification Status: ${userContext.status || 'N/A'}
+- Phone: ${userContext.phone || 'N/A'}
 
-CURRENT USER CONTEXT:
 Name: ${userContext.name || 'Unknown'}
 Role: ${userContext.role || 'User'}
 

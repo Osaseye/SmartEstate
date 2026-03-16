@@ -29,7 +29,7 @@ export default function TenantOnboarding() {
 
   // Load saved state (Persistence)
   useEffect(() => {
-    const saved = localStorage.getItem('tenantOnboarding');
+    const saved = sessionStorage.getItem('tenantOnboarding');
     if (saved) {
         try {
             const parsed = JSON.parse(saved);
@@ -49,7 +49,7 @@ export default function TenantOnboarding() {
         personalInfo,
         selectedEstate
     };
-    localStorage.setItem('tenantOnboarding', JSON.stringify(toSave));
+    sessionStorage.setItem('tenantOnboarding', JSON.stringify(toSave));
   }, [step, personalInfo, selectedEstate]);
 
   // Sync user phone if available and not yet set
@@ -126,7 +126,7 @@ export default function TenantOnboarding() {
       });
 
       // Clear persistence
-      localStorage.removeItem('tenantOnboarding');
+      sessionStorage.removeItem('tenantOnboarding');
 
       // 2. Success state
       setStep(4);

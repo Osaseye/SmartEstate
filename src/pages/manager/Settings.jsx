@@ -18,7 +18,7 @@ export default function ManagerSettings() {
   const { toasts, addToast, removeToast } = useToast();
   
   const [activeTab, setActiveTab] = useState('profile'); 
-  const [profileData, setProfileData] = useState({ name: '', email: '' });
+  const [profileData, setProfileData] = useState({ name: '', email: '', personalEmail: '' });
   const [estateData, setEstateData] = useState({ name: '', address: '', code: '', image: '' });
   const [estateId, setEstateId] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -26,7 +26,11 @@ export default function ManagerSettings() {
 
   useEffect(() => {
     if (user) {
-      setProfileData({ name: user.name || '', email: user.email || '' });
+      setProfileData({ 
+        name: user.name || '', 
+        email: user.email || '',
+        personalEmail: user.personalEmail || '' 
+      });
       
       const fetchEstateKey = async () => {
          const q = query(collection(db, "estates"), where("managerId", "==", user.uid || user.id));
@@ -56,7 +60,8 @@ export default function ManagerSettings() {
        if (user.uid) {
          const userRef = doc(db, "users", user.uid);
          await updateDoc(userRef, {
-            name: profileData.name
+            name: profileData.name,
+            personalEmail: profileData.personalEmail
          });
        }
 
@@ -150,6 +155,27 @@ export default function ManagerSettings() {
                                className="w-full p-3 bg-slate-100 border border-slate-200 rounded-xl text-slate-500 cursor-not-allowed"
                                value={profileData.email}
                             />
+                            <p className="text-xs text-slate-400 mt-2">Login email cannot be changed.</p>
+                         </div>
+                         <div className="md:col-span-2 bg-blue-50/50 p-6 rounded-2xl border border-blue-100">
+                             <div className="flex gap-4">
+                                <div className="p-2 bg-blue-100 rounded-lg h-fit text-blue-600">
+                                   <User size={20} />
+                                </div>
+                                <div className="flex-1">
+                                   <label className="block text-sm font-bold text-slate-900 mb-2">Notification Email</label>
+                                   <input 
+                                      type="email" 
+                                      className="w-full p-3 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 mb-2"
+                                      placeholder="e.g. personal@gmail.com"
+                                      value={profileData.personalEmail}
+                                      onChange={e => setProfileData({...profileData, personalEmail: e.target.value})}
+                                   />
+                                   <p className="text-sm text-slate-500">
+                                      We'll send system notifications to this email address instead of your login email.
+                                   </p>
+                                </div>
+                             </div>
                          </div>
                       </div>
                       <div className="pt-4 flex justify-between items-center">

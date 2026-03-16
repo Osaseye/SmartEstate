@@ -17,7 +17,7 @@ export default function Landing() {
       <CommunicationHub />
       <Workflow />
       <Footer />
-      <AIChatbot />
+      <AIChatbot disableContext={true} />
     </div>
   );
 }

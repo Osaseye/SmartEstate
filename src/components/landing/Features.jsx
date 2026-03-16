@@ -38,9 +38,9 @@ export default function Features() {
               className="group relative overflow-hidden rounded-2xl h-96 shadow-xl cursor-pointer"
             >
               <img 
-                alt="Property Managers meeting" 
+                alt="Property Management Dashboard" 
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuA24cZMjHSnKdjcqbA3DSNHRz7joNiOj99J3fQeaN6ARnATulKYefhD-kOJL-KZP-IoVahJhO9KisRItqT8Ear_Jdv34Jf7HAgaCXUJhlVJWGC3-5cdW5qfuTBUfJ1TIyzKz2bPlXPZslPes1LFZg_KSLi2K4rFJ-j-3lylg49wUz10FdU9p8YBbqKq9RMh3Tkci7uF23qoOW2OL8RISbcIVQKKXq3m2iPSNzEtc0eyTCeD_Vv_FyIg1kut4Q2ZszM68eFx870R4JY" 
+                src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80" 
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 to-transparent"></div>
               <div className="absolute bottom-0 left-0 p-8 w-full">
@@ -59,9 +59,9 @@ export default function Features() {
               className="group relative overflow-hidden rounded-2xl h-96 shadow-xl cursor-pointer"
             >
               <img 
-                alt="Tenants enjoying living room" 
+                alt="Smart Home Keys" 
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuDoU1gW3G4eU6KPYw7cl7UGNcbwarijpWwksOFcMD8McgHxsgyFfmznaCybZsRzJEyyldOU8zBpPftS85dhq9XCA-Rs8ES5BSOVUD3EX9x_MHPHtianEmF7s6uXfThCHgKZ97U0xQolO4zhyilMtebfLbuwvWToqoLYbRHci59WWspP9BNZg6vHm3hsMJqzHGwmTCoEUm6lkrixTMtzF5AJwmfj0VP9ZSAPV79mi_0HsimP991h_5ux-BC4YiQ607CllSWst3x6ALI" 
+                src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&q=80" 
               />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 to-transparent"></div>
               <div className="absolute bottom-0 left-0 p-8 w-full">

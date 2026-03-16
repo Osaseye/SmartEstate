@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { cn } from "../../lib/utils";
+import AIChatbot from "../ui/AIChatbot";
 
 const NAV_ITEMS = {
   tenant: [
@@ -267,6 +268,8 @@ export default function DashboardLayout() {
           </motion.div>
         )}
       </AnimatePresence>
+      
+      <AIChatbot />
     </div>
   );
 }
