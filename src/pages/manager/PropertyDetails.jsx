@@ -51,7 +51,7 @@ export default function PropertyDetails() {
   };
 
   const handleEdit = () => {
-    addToast({ type: 'info', title: 'Coming Soon', message: 'Edit functionality is under development.' });
+    navigate('/manager/properties/new', { state: { editUnit: unit } });
   };
 
 
@@ -233,9 +233,9 @@ export default function PropertyDetails() {
                          </div>
                       </div>
 
-                      <button className="w-full py-3 border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-colors">
+                      <Link to={`/manager/tenants/request/${tenant.id}`} className="block w-full py-3 border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-colors text-center">
                          View Full Profile
-                      </button>
+                      </Link>
                    </div>
                 ) : (
                    <div className="text-center py-8">

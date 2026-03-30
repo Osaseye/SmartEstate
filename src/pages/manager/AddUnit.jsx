@@ -1,20 +1,24 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../components/ui/Toast';
 import { db } from '../../lib/firebase';
-import { doc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { ChevronRight, Home, Building2, Banknote, Calendar, Upload } from 'lucide-react';
 import { uploadFile } from '../../lib/storage';
 
 export default function AddUnit() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { addToast, toasts, removeToast, ToastContainer } = useToast();
   const [estate, setEstate] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageFile, setImageFile] = useState(null);
   
+  const editUnit = location.state?.editUnit;
+  const isEditing = !!editUnit;
+
   const [newUnit, setNewUnit] = useState({
     block: '',
     number: '',
@@ -24,6 +28,20 @@ export default function AddUnit() {
     rentAmount: '',
     rentDueDate: '1' // Day of month (1-31)
   });
+
+  useEffect(() => {
+    if (isEditing) {
+      setNewUnit({
+        block: editUnit.block || '',
+        number: editUnit.number || '',
+        type: editUnit.type || 'Apartment',
+        bedrooms: editUnit.bedrooms || '2',
+        status: editUnit.status || 'vacant',
+        rentAmount: editUnit.rentAmount || '',
+        rentDueDate: editUnit.rentDueDate || '1'
+      });
+    }
+  }, [isEditing, editUnit]);
 
   useEffect(() => {
     const fetchEstate = async () => {
@@ -59,7 +77,7 @@ export default function AddUnit() {
     if (!unitName.trim()) unitName = `Unit ${newUnit.number}`;
 
     try {
-        let imageUrl = '';
+        let imageUrl = editUnit?.image || '';
         if (imageFile) {
             imageUrl = await uploadFile(imageFile, `units/${user.estateId}`);
         }
@@ -68,23 +86,29 @@ export default function AddUnit() {
           ...newUnit,
           name: unitName,
           estateId: estate.id,
-          tenantId: null,
-          tenantName: null,
-          status: 'vacant',
           image: imageUrl,
-          createdAt: serverTimestamp()
         };
 
-        await addDoc(collection(db, "properties"), payload);
-        addToast({ type: 'success', title: 'Unit Created', message: `${unitName} has been added successfully.` });
+        if (isEditing) {
+          const unitRef = doc(db, "properties", editUnit.id);
+          await updateDoc(unitRef, payload);
+          addToast({ type: 'success', title: 'Unit Updated', message: `${unitName} has been updated successfully.` });
+        } else {
+          payload.tenantId = null;
+          payload.tenantName = null;
+          payload.status = 'vacant';
+          payload.createdAt = serverTimestamp();
+          await addDoc(collection(db, "properties"), payload);
+          addToast({ type: 'success', title: 'Unit Created', message: `${unitName} has been added successfully.` });
+        }
         
         // Short delay to allow toast to be seen before nav (optional, but nice)
         setTimeout(() => {
            navigate('/manager/properties');
         }, 1000);
     } catch (error) {
-        console.error("Error adding property:", error);
-        addToast({ type: 'error', title: 'Creation Failed', message: error.message });
+        console.error(`Error ${isEditing ? 'updating' : 'adding'} property:`, error);
+        addToast({ type: 'error', title: `${isEditing ? 'Update' : 'Creation'} Failed`, message: error.message });
         setIsSubmitting(false); // Re-enable button on error
     }
   };
@@ -109,8 +133,8 @@ export default function AddUnit() {
              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100 shadow-sm text-slate-400">
                 <Building2 className="w-8 h-8" />
              </div>
-             <h1 className="text-2xl font-bold font-display text-slate-900">Add New Property</h1>
-             <p className="text-slate-500">Define the details for a new unit in {estate.name}.</p>
+             <h1 className="text-2xl font-bold font-display text-slate-900">{isEditing ? 'Edit Property' : 'Add New Property'}</h1>
+             <p className="text-slate-500">{isEditing ? `Update details for ${editUnit.name}` : `Define the details for a new unit in ${estate.name}.`}</p>
           </div>
 
           <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm">
@@ -269,7 +293,7 @@ export default function AddUnit() {
                       disabled={isSubmitting}
                       className="flex-1 py-4 bg-primary text-white font-bold rounded-xl hover:bg-sky-600 hover:shadow-lg hover:shadow-primary/20 transition-all transform active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                    >
-                      {isSubmitting ? 'Creating...' : 'Create Unit'}
+                      {isSubmitting ? 'Saving...' : isEditing ? 'Update Property' : 'Create Unit'}
                    </button>
                 </div>
              </form>
@@ -278,5 +302,7 @@ export default function AddUnit() {
     </div>
     <ToastContainer toasts={toasts} remove={removeToast} />
     </>
+  );
+}
   );
 }

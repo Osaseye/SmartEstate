@@ -24,6 +24,10 @@ export default function Tenants() {
   const [pendingRequests, setPendingRequests] = useState([]);
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('all'); // all, assigned, unassigned
+  const [showFilter, setShowFilter] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState(null);
   
   useEffect(() => {
     fetchData();
@@ -61,6 +65,19 @@ export default function Tenants() {
   };
 
   if (loading) return <Loader />;
+
+  const filteredTenants = tenants.filter(t => {
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = t.name?.toLowerCase().includes(searchLower) || t.email?.toLowerCase().includes(searchLower);
+    
+    if (filterType === 'assigned') {
+      return matchesSearch && !!t.houseId;
+    }
+    if (filterType === 'unassigned') {
+      return matchesSearch && !t.houseId;
+    }
+    return matchesSearch;
+  });
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -158,12 +175,36 @@ export default function Tenants() {
                   <input 
                      type="text" 
                      placeholder="Search tenants by name, unit, or email..." 
+                     value={searchTerm}
+                     onChange={(e) => setSearchTerm(e.target.value)}
                      className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 outline-none transition-all"
                   />
                </div>
-               <button className="flex items-center justify-center gap-2 px-6 py-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-colors">
-                  <Filter className="w-5 h-5" /> Filter
-               </button>
+               <div className="relative">
+                  <button 
+                     onClick={() => setShowFilter(!showFilter)}
+                     className="flex items-center justify-center gap-2 px-6 py-3 bg-white border border-slate-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-colors w-full md:w-auto"
+                  >
+                     <Filter className="w-5 h-5" /> 
+                     {filterType === 'all' ? 'Filter' : filterType === 'assigned' ? 'Assigned' : 'Unassigned'}
+                  </button>
+                  {showFilter && (
+                     <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-lg z-10 overflow-hidden">
+                        <button 
+                           onClick={() => { setFilterType('all'); setShowFilter(false); }}
+                           className="w-full text-left px-4 py-3 text-sm font-semibold hover:bg-slate-50"
+                        >All Tenants</button>
+                        <button 
+                           onClick={() => { setFilterType('assigned'); setShowFilter(false); }}
+                           className="w-full text-left px-4 py-3 text-sm font-semibold hover:bg-slate-50 border-t border-slate-100"
+                        >Assigned Only</button>
+                        <button 
+                           onClick={() => { setFilterType('unassigned'); setShowFilter(false); }}
+                           className="w-full text-left px-4 py-3 text-sm font-semibold hover:bg-slate-50 border-t border-slate-100"
+                        >Unassigned Only</button>
+                     </div>
+                  )}
+               </div>
             </div>
 
             <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
@@ -179,7 +220,7 @@ export default function Tenants() {
                         </tr>
                      </thead>
                      <tbody className="divide-y divide-slate-50">
-                        {tenants.map(tenant => {
+                        {filteredTenants.map(tenant => {
                            // Find property in our fetched properties list
                            const assignedUnit = properties.find(h => h.id === tenant.houseId);
                            
@@ -211,7 +252,7 @@ export default function Tenants() {
                                  <td className="py-4">
                                     <div className="flex flex-col text-sm">
                                        <span className="text-slate-600">{tenant.email}</span>
-                                       <span className="text-slate-400 text-xs">+234 812 345 6789</span>
+                                       <span className="text-slate-400 text-xs">{tenant.phone || 'No phone provided'}</span>
                                     </div>
                                  </td>
                                  <td className="py-4">
@@ -219,10 +260,29 @@ export default function Tenants() {
                                        <Shield className="w-3 h-3" /> Verified
                                     </span>
                                  </td>
-                                 <td className="py-4 pr-6 text-right">
-                                    <button className="p-2 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-900 transition-colors">
+                                 <td className="py-4 pr-6 text-right relative">
+                                    <button 
+                                       onClick={() => setOpenDropdown(openDropdown === tenant.id ? null : tenant.id)}
+                                       className="p-2 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-900 transition-colors"
+                                    >
                                        <MoreVertical className="w-5 h-5" />
                                     </button>
+                                    {openDropdown === tenant.id && (
+                                       <div className="absolute right-6 top-10 w-32 bg-white border border-slate-200 rounded-xl shadow-lg z-20 overflow-hidden text-left">
+                                          <Link 
+                                             to={`/manager/tenants/request/${tenant.id}`}
+                                             className="block w-full text-left px-4 py-3 text-sm font-semibold hover:bg-slate-50 text-slate-700"
+                                          >
+                                             View Profile
+                                          </Link>
+                                          <button 
+                                             onClick={() => alert(`Contacting ${tenant.name}...`)}
+                                             className="w-full text-left px-4 py-3 text-sm font-semibold hover:bg-slate-50 border-t border-slate-100"
+                                          >
+                                             Message
+                                          </button>
+                                       </div>
+                                    )}
                                  </td>
                               </tr>
                            );
@@ -231,7 +291,7 @@ export default function Tenants() {
                   </table>
                </div>
                
-               {tenants.length === 0 && (
+               {filteredTenants.length === 0 && (
                   <div className="p-12 text-center">
                       <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
                           <Search className="w-8 h-8" />
